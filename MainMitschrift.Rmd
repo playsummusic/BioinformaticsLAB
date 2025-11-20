@@ -13,3 +13,9 @@ First comment from Simon (haha fck u simon)
 simon is now able to push push push something to git (yeah)
 
 For reading in csv data with the read.genbank function, be care of what sequence you want to look at, you need to define it in the function with the "type" argument (default is nucleotides, if you look for AA you need to tell it type = "AA")
+
+20.11.
+
+Doing MSA the first time.
+First load in your (csv) data. Then get your "reference" gene entries in GenBank
+

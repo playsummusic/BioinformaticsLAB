@@ -1,0 +1,102 @@
+---
+title: "Alignments"
+author: "MOL.923"
+date: "20/11/2025"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+  markdown: 
+    wrap: sentence
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+suppressPackageStartupMessages(library(ape))
+suppressPackageStartupMessages(library(ggtree))
+suppressPackageStartupMessages(library(ggtree))
+suppressPackageStartupMessages(library(phangorn))
+suppressPackageStartupMessages(library(msa))
+
+```
+
+***
+
+### Learning Objectives
+
+- aligning sequences (online and locally in R)  
+- cleaning alignments
+- check alignments in viewer
+- preparing alignments for phylogenetic analysis
+
+***
+
+
+
+## Clean the sequences
+
+Yesterday we downloaded several sequences. Lets start preparimg them for aligning. We first laod the packages we need today. 
+```{R}
+library(ape)
+library(msa)
+```
+
+
+Let's start with the Felidae data. 
+```{R}
+Felidae_df <- read.csv("data_raw/Felidae.csv")
+head(Felidae_df)
+felidae_raw <- read.GenBank(Felidae_df$accnum)
+felidae_raw
+```
+Now let's split the data in the two groups. We need to align genes separately. We also rename the sequences with the species name instead of the accession number. 
+```{R}
+RAG2 <- felidae_raw[Felidae_df$Gene=="RAG2"]
+names(RAG2) <- Felidae_df$Taxon[Felidae_df$Gene=="RAG2"]
+```
+At last we save the sequences, so that we can use them afterwards. 
+```{R}
+write.FASTA(RAG2, file="data/RAG2_raw.fasta")
+```
+Now it's your turn. Do the same with the TTR gene. 
+
+
+
+
+## Multiple sequence alignments
+
+EBI offers a wide range of alignment tools (e.g. Clustal$\Omega$, MAFFT, MUSCLE, KAGLIN, T-Coffee) online <https://www.ebi.ac.uk/jdispatcher/msa>.
+As long as one does not want to align huge data sets this is often a good choice if one does not want to install software on a computer.
+
+![EBI_MSA](MSA.png)
+
+Align two different genes with two different alignment programs and save them as with a name you can figure out whats in there (e.g. "TTR_mafft.fasta") in a month.
+
+
+## Aligning sequences in R
+
+The msa package as part of Bioconductor gives access to some alignment programs from within R without the need to install extra software. 
+```{R}
+RAG2_clustalo <- msaClustalOmega("data/RAG2_raw.fasta", type="dna")
+RAG2_clustalo <- as.DNAbin(RAG2_clustalo)
+RAG2_muscle <- msaMuscle("data/RAG2_raw.fasta", type="dna")
+RAG2_muscle <- as.DNAbin(RAG2_muscle)
+
+write.FASTA(RAG2_muscle, file="data/RAG2_muscle.fasta")
+write.FASTA(RAG2_clustalo, file="data/RAG2_clustalo.fasta")
+```
+
+## Visualizing multiple sequence alignments in R
+
+First we load the library phangorn. 
+This package provides functions for handling alignments and building phylogenetic trees.
+
+In case we need to clean up the data even more see `?del.colgapsonly`
+for deleting site which contain mostly gaps. 
+
+Lets have a short look at the alignments:
+```{R, results='hide'}
+image(RAG2_muscle)
+par(mar=c(3,9,4,1))
+image(RAG2_clustalo[1:20, 1:50])
+```
+

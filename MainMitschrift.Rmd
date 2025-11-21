@@ -20,4 +20,4 @@ Doing MSA the first time.
 First load in your (csv) data. Then get your "reference" gene entries in GenBank
 
 21.11.
-For pymol: ask simon he has a readme (it works in the anaconda prompt with an own environment)
+For pymol: ask simon he has a readme (it works in the anaconda prompt with an own environment) Today we created phylo trees

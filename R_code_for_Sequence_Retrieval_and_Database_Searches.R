@@ -1,0 +1,79 @@
+# Load required packages
+if (!requireNamespace("rentrez", quietly = TRUE)) {
+  install.packages("rentrez")
+}
+if (!requireNamespace("xml2", quietly = TRUE)) {
+  install.packages("xml2")
+}
+library(rentrez)
+library(xml2)
+
+# Set your email for NCBI
+Sys.setenv(ENTREZ_EMAIL = "mobofo3315@feralrex.com")  # Replace with your email
+
+# Function to submit BLAST query and get RID, estimated wait time
+submit_blast <- function(query_seq) {
+  blast_url <- paste0(
+    "https://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Put&PROGRAM=blastp&DATABASE=nr&QUERY=", URLencode(query_seq)
+  )
+  res <- httr::GET(blast_url)
+  content <- httr::content(res, as = "text", encoding = "UTF-8")
+  
+  rid <- sub(".*RID = ([A-Z0-9]+).*", "\\1", content)
+  rtoe <- as.numeric(sub(".*RTOE = ([0-9]+).*", "\\1", content))
+  
+  if (nchar(rid) == 0) stop("Failed to retrieve RID from BLAST submission")
+  
+  return(list(rid=rid, wait=rtoe))
+}
+
+# Function to poll BLAST results until ready and parse XML
+wait_for_blast_results <- function(rid, max_attempts=20, wait_sec=10) {
+  for (i in seq_len(max_attempts)) {
+    url <- paste0("https://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Get&RID=", rid, "&FORMAT_TYPE=XML")
+    res <- httr::GET(url)
+    content <- httr::content(res, as = "text", encoding = "UTF-8")
+    
+    if (grepl("<BlastOutput>", content)) {
+      cat(sprintf("BLAST results ready on attempt %d.\n", i))
+      return(read_xml(content))
+    } else {
+      cat(sprintf("Attempt %d: Results not ready, retrying in %d seconds...\n", i, wait_sec))
+      Sys.sleep(wait_sec)
+    }
+  }
+  stop("Failed to retrieve valid BLAST XML after retries.")
+}
+
+# Function to extract unique accession IDs from BLAST XML
+extract_accessions <- function(xml_doc, max_hits=25) {
+  hits <- xml_find_all(xml_doc, "//Hit")
+  accessions <- unique(xml_text(xml_find_all(hits, "Hit_accession")))
+  accessions <- sub("\\..*$", "", accessions)  # remove version suffix
+  head(accessions, max_hits)
+}
+
+# Your query protein accession
+query_protein <- "XP_001703004"
+
+# Submit BLAST and get RID + wait time
+blast_info <- submit_blast(query_protein)
+cat("RID:", blast_info$rid, "\nEstimated wait time (seconds):", blast_info$wait, "\n")
+
+Sys.sleep(blast_info$wait + 5)  # initial wait
+
+# Poll until BLAST results are ready and parse XML
+blast_xml <- wait_for_blast_results(blast_info$rid)
+
+# Extract accession IDs from hits
+accessions <- extract_accessions(blast_xml)
+cat(sprintf("Found %d accessions.\n", length(accessions)))
+
+# Fetch sequences in FASTA format using Entrez
+fasta_seqs <- rentrez::entrez_fetch(db="protein", id=paste(accessions, collapse=","), rettype="fasta", retmode="text")
+
+# Save sequences to a FASTA file in data_raw folder
+dir.create("data_raw", showWarnings = FALSE)
+output_file <- "data_raw/FAP_BLAST.fas"
+writeLines(fasta_seqs, con=output_file)
+cat(sprintf("Saved %d sequences to %s\n", length(accessions), output_file))

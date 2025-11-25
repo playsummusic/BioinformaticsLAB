@@ -46,10 +46,10 @@ library(vegan)
 ```
 First of all, we import data from qiime2 into R
 ```{R, cache=TRUE}
-featureTableFile <- "data/table.qza"
-taxonomyTableFile <- "data/taxonomy.qza"
-sampleMetaFile <- "data/metadata.tsv"
-phyTreeFile <- "data/16s_rooted_tree.qza"
+featureTableFile <- "data_raw/table.qza"
+taxonomyTableFile <- "data_raw/taxonomy.qza"
+sampleMetaFile <- "data_raw/metadata.tsv"
+phyTreeFile <- "data_raw/16s_rooted_tree.qza"
 
 tse <- importQIIME2(
   featureTableFile = featureTableFile,

@@ -1,0 +1,28 @@
+---
+title: "Assignment for Report1"
+output: pdf_document
+date: "2025-11-25"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+suppressPackageStartupMessages(library(ape))
+suppressPackageStartupMessages(library(phangorn))
+suppressPackageStartupMessages(library(msa))
+suppressPackageStartupMessages(library(reticulate))
+```
+
+#Assignment for Report 1
+
+```{python}
+
+```
+
+```{r}
+library(ape)
+library(phangorn)
+library(msa)
+FAP <- read.FASTA("data_edited/RAG2_raw.fasta")
+
+```
+

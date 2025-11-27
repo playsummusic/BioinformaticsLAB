@@ -1,0 +1,159 @@
+This is the code from the instructions for 27.11.
+
+
+Reading in Data
+```{r}
+### load the data with read delim, because it is tab seperated
+annotatedRawCounts <- read_delim("Counts_raw.tsv")
+
+head(annotatedRawCounts)
+### Use column ID as rownames, rownames can be used for indexing
+annotatedRawCounts <- annotatedRawCounts  %>% 
+  column_to_rownames(var = "ID")
+
+### split data into rawCounts and Annotations
+rawCounts <- annotatedRawCounts[,3:14]
+annotations <- annotatedRawCounts[,1:2]
+
+### show the first rows
+head(rawCounts)
+
+# Read in the sample info table
+sampleData <- read_csv("SraRunTable.csv")
+head(sampleData)
+
+# reduce the sample Data to the informatioon we actually need
+sampleData <- sampleData[, c("Run","genotype","treatment")]
+
+# rename factors to make them more neat
+
+sampleData$genotype[sampleData$genotype == "wild type"] <- "WT"
+sampleData$genotype[sampleData$genotype == "tgt mutant"] <- "TGT"
+
+sampleData$treatment[sampleData$treatment == "2 mM nickel"] <- "Nickel"
+
+# Also save a copy for later
+sampleData_backup <- sampleData
+```
+
+Filtering of the data
+```{r}
+dim(rawCounts)
+dim(rawCounts[rowSums(rawCounts) > 10, ])
+
+# Perform pre-filtering of the data
+filteredCounts <- rawCounts[rowSums(rawCounts) > 10, ]
+```
+
+Prepare Data
+```{r}
+# Convert sample variable mappings to an appropriate form that DESeq2 can read
+head(sampleData)
+
+# Order the tissue types so that it is sensible and make sure the control sample is first: wt -> ko
+sampleData$genotype <- factor(sampleData$genotype, levels=c("WT", "TGT"))
+sampleData$treatment <- factor(sampleData$treatment, levels=c("none", "Nickel"))
+
+# Combine both conditions into one group
+sampleData$group <- factor(paste0(sampleData$genotype,".",sampleData$treatment))
+
+# set WT.none (basestrain grown under normal conditions) as reference level
+sampleData$group <- relevel(sampleData$group, ref ="WT.none")
+
+# Use the Column "Run" as row names
+sampleData <- sampleData %>%
+              column_to_rownames("Run")
+
+# check if the sample names in the counts and the sample data are the same
+all(colnames(filteredCounts) %in% rownames(sampleData))
+
+# Put the columns of the count data in the same order as rows names of the sample mapping 
+filteredCounts <- filteredCounts[, rownames(sampleData)]
+
+# Create the DESeq2DataSet object
+DESeq2Counts <- DESeqDataSetFromMatrix(countData=filteredCounts, colData=sampleData, design = ~ group)
+
+# make sure it worked
+head(DESeq2Counts)
+colData(DESeq2Counts)
+```
+
+Differential Expression Analysis
+```{r}
+# Run pipeline for differential expression steps 
+DESeq2Data <- DESeq(DESeq2Counts)
+
+resultsNames(DESeq2Data)
+```
+
+
+Extracting results
+```{r}
+# Extract differential expression results between nickel treated and untreated wt strain
+DESeq2Results_treatment <- results(DESeq2Data, contrast = c("group","WT.Nickel","WT.none"), alpha = 0.05)
+
+# View summary of results
+summary(DESeq2Results_treatment, )
+
+# Show results for the first 10 genes
+DESeq2Results_treatment[1:10, ]
+
+### Make into tibble (table) for saving
+DESeq2ResultsDF <- as_tibble(DESeq2Results_treatment)
+
+### Add back the IDs for saving
+DESeq2ResultsDF$ID <- rownames(DESeq2Results_treatment)
+
+#Write tibble to tab separated file
+write_delim(DESeq2ResultsDF, file = "DESeq2Result_treatment.tsv")
+
+### Repeat the steps above for a significance level of 0.05
+### Look at the help section of the function "results" to find the correct settings
+
+### Repeat the steps above for the comparison of nickel treatment to no treatment
+### in the tgt knockout strain and significance level of 0.05
+
+#Show group names if you need a reminder:
+unique(sampleData$group)
+```
+
+Experimental QC - Clustering of samples (PCA)
+```{r}
+# First we have to normalize the data we want to show
+DESeq2Rld <- rlog(DESeq2Counts)
+
+# This actually calculates the PCA. "ïntgroup" defines the factors we are interested in. You can try out what happens if you look at strain or replicate only
+DESeq2PCA <- plotPCA(DESeq2Rld, intgroup = c("genotype","treatment"))
+
+# This actually shows the plot
+DESeq2PCA
+
+# Since the dots alone are not so informative, we can add labels to each sample
+DESeq2PCA + geom_text(aes(label = name), position = position_nudge(y = 0.5))
+
+### save plot to file
+ggsave('PCAplot.png', width = 8, height = 6)
+```
+
+Viewing counts for a single geneID
+```{r}
+# View the rowname and annotation for gene tgt
+annotations[annotations$gene == "tgt",]
+
+# Extract counts for the gene tgt
+tgtCounts <- plotCounts(DESeq2Data, gene="b0406", intgroup=c("genotype", "treatment"), returnData=TRUE)
+
+head(tgtCounts)
+
+# plot counts
+
+ggplot(tgtCounts,  aes(x=genotype, y=count)) + geom_point() 
+
+ggplot(tgtCounts, aes(x=genotype, y=count, colour=treatment, group=genotype)) + #base settings as data and x, y axis
+  geom_point() +
+  ggtitle("Gene tgt")
+
+### save plot to file
+ggsave('TGTcounts.png', width = 8, height = 6)
+```
+

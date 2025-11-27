@@ -53,7 +53,7 @@ extract_accessions <- function(xml_doc, max_hits=25) {
   head(accessions, max_hits)
 }
 
-# Your query protein accession
+# Your query protein accession (change accession number here)
 query_protein <- "XP_001703004"
 
 # Submit BLAST and get RID + wait time
@@ -74,6 +74,7 @@ fasta_seqs <- rentrez::entrez_fetch(db="protein", id=paste(accessions, collapse=
 
 # Save sequences to a FASTA file in data_raw folder
 dir.create("data_raw", showWarnings = FALSE)
-output_file <- "data_raw/FAP_BLAST.fas"
+output_file <- "data_raw/FAP_BLAST.fas" # Change name of file here
 writeLines(fasta_seqs, con=output_file)
 cat(sprintf("Saved %d sequences to %s\n", length(accessions), output_file))
+

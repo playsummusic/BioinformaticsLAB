@@ -5,11 +5,8 @@ date: "`r Sys.Date()`"
 bibliography: packages2.bib
 nocite: '@*'
 output:
-  html_document:
-    toc: true
-    toc_depth: '2'
-    df_print: paged
   pdf_document:
+    latex_engine: xelatex
     extra_dependencies: ["float"]
     toc: true
     toc_depth: 2
@@ -18,6 +15,10 @@ output:
     fig_height: 5
     fig_caption: true
     keep_tex: false
+  html_document:
+    toc: true
+    toc_depth: '2'
+    df_print: paged
 fontsize: 11pt
 geometry: margin=1in
 ---
@@ -46,7 +47,9 @@ knitr::write_bib(c("TreeSummarizedExperiment", "scater", "mia", "miaViz",
 
 ```
 \newpage
-# Part One: Microbiome (Taxonomic) Analysis
+
+
+# Microbiome (Taxonomic) Analysis
 ## Installing Required Packages (if not already installed):
 
 ```{r install_packages, eval=FALSE}
@@ -84,7 +87,7 @@ library(msa)
 
 ## First we import our data and have a look at it:
 The data is taken from the TUGraz TeachCenter Course: Laboratory Course Bioninformatics/Metagenomics
-```{r}
+```{r, echo=FALSE}
 featureTableFile <- "data2/table.qza"
 taxonomyTableFile <- "data2/taxonomy.qza"
 sampleMetaFile <- "data2/metadata.tsv"
@@ -110,6 +113,7 @@ The basic plot, while informative, is challenging to interpret due to:
 - Overlapping labels and cluttered x-axis
 - All samples grouped together without clear visual distinction
 - Difficulty in comparing treatment effects
+
 
 ## Improvements:
 Since this plot seems rather difficult to interpret, we will change a few parameters to hopefully make it more readable:
@@ -237,7 +241,9 @@ cat("AIMS4 mean Shannon diversity:", round(aims4_mean, 3), "\n")
 cat("Difference:", round(abs(aims1_mean - aims4_mean), 3), "\n")
 ```
 
-### Environmental significance
+
+## Environmental significance
+
 After comparing the genotype, we also want to have a look at the environment:
 ```{r}
 p_shannon_environment <- plotColData(tse, "shannon_diversity", "Environment",
@@ -388,4 +394,13 @@ if (nchar(fasta_content) > 300) {
 
 \newpage
 
-# References
+References
+=======
+## Improving the plot
+Since this plot is visually not very appealing and hard to compell, we try to improve it and make it more user-friendly: 
+```{r}
+
+```
+
+
+

@@ -102,6 +102,7 @@ The basic plot, while informative, is challenging to interpret due to:
 - All samples grouped together without clear visual distinction
 - Difficulty in comparing treatment effects
 
+<<<<<<< HEAD
 ##Improvements:
 Since this plot seems rather difficult to interpret, we will change a few parameters to hopefully make it more readable:
 ```{r}
@@ -343,3 +344,11 @@ The strong environmental effect and weak genotype effect suggest that:
 \newpage
 
 # References
+=======
+##Improving the plot
+Since this plot is visually not very appealing and hard to compell, we try to improve it and make it more user-friendly: 
+```{r}
+
+```
+
+>>>>>>> 675e61666263a7b3aeb533ff6d3fe0711caa8a23

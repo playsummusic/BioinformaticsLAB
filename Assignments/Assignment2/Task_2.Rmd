@@ -36,7 +36,7 @@ knitr::write_bib(c("TreeSummarizedExperiment", "scater", "mia", "miaViz",
 
 ```
 \newpage
-#Microbiome (Taxonomic) Analysis
+#Part One: Microbiome (Taxonomic) Analysis
 ##Installing Required Packages (if not already installed):
 
 ```{r install_packages, eval=FALSE}
@@ -56,8 +56,6 @@ for (pkg in packages) {
     }
   }
 }
-
-devtools::install_github("jbisanz/qiime2R")
 ```
 
 
@@ -71,6 +69,7 @@ library(vegan)
 library(ggplot2)
 library(tidyverse)
 library(qiime2R)
+library(msa)
 ```
 
 ##First we import our data and have a look at it:
@@ -102,7 +101,6 @@ The basic plot, while informative, is challenging to interpret due to:
 - All samples grouped together without clear visual distinction
 - Difficulty in comparing treatment effects
 
-<<<<<<< HEAD
 ##Improvements:
 Since this plot seems rather difficult to interpret, we will change a few parameters to hopefully make it more readable:
 ```{r}
@@ -324,7 +322,7 @@ The consistency across all indices provides strong evidence that the environment
 | **Dominance** | Inverse Simpson highest in Control (less dominated by single species) |
 | **Overall Pattern** | Convergent evidence: Environment is the dominant driver |
 
-##Genotype Effect Results:##
+##Genotype Effect Results:
 
 No statistically significant differences detected between AIMS1 and AIMS4 genotypes for any diversity measure (all p-values > 0.05). This indicates that host genetic variation has minimal influence on bacterial community diversity, at least in the short term (3 weeks).
 
@@ -338,17 +336,38 @@ The strong environmental effect and weak genotype effect suggest that:
 4. **Evolutionary implications:** Under chronic stress, genotype effects might emerge, but acutely, the environment overrides genetic differences
 
 
+#Part Two: Protein Folding prediction
+The FAP results from the BLAST search origin from the automated BLAST search code from Task_1, which will not be displayed here again.
+The sequences from the original publication were retrieved from TUGraz TeachCenter/Course/LabouratoryCourseBioinformatics/Fatty_acid_photodecarboxylase.
+In the following section, we will extract one sequence from each FASTA-file and predict a protein structure using AlphaFold. Further, we want to analyze it graphically using PyMol.
+
+##Sequence retrival from publication and BLAST search:
+First, we extract two sequences (one from each file):
+```{r}
+extract_first_fasta <- function(fasta_file) {
+  lines <- readLines(fasta_file)
+  header_indices <- which(substr(lines, 1, 1) == ">")
+  header_idx <- header_indices[1]
+  seq_lines <- lines[(header_idx + 1)]
+  seq <- paste(seq_lines, collapse = "")
+}
+
+
+# Extract first sequence and export
+result <- extract_first_fasta("FAP_BLAST.fas")
+
+# Create FASTA format for ColabFold
+fasta_content <- paste0(
+  ">", result$name, "\n",
+  result$sequence, "\n"
+)
+
+# Save
+writeLines(fasta_content, "01_alphafold_input.fasta")
+```
 
 
 
 \newpage
 
 # References
-=======
-##Improving the plot
-Since this plot is visually not very appealing and hard to compell, we try to improve it and make it more user-friendly: 
-```{r}
-
-```
-
->>>>>>> 675e61666263a7b3aeb533ff6d3fe0711caa8a23

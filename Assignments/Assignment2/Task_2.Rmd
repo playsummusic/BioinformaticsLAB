@@ -68,8 +68,6 @@ for (pkg in packages) {
 }
 ```
 
-
-<<<<<<< HEAD
 ##Then load the required packages:
 ```{r load_libraries, eval=FALSE}
 library(scater)
@@ -83,8 +81,7 @@ library(qiime2R)
 library(msa)
 ```
 
-=======
->>>>>>> 854e5e0b79cebfc959713c04eaeb06e2e5add133
+
 ##First we import our data and have a look at it:
 The data is taken from the TUGraz TeachCenter Course: Laboratory Course Bioninformatics/Metagenomics
 ```{r}
@@ -357,30 +354,36 @@ The sequences from the original publication were retrieved from TUGraz TeachCent
 In the following section, we will extract one sequence from each FASTA-file and predict a protein structure using AlphaFold. Further, we want to analyze it graphically using PyMol.
 
 ##Sequence retrival from publication and BLAST search:
-First, we extract two sequences (one from each file):
+First, we extract two sequences (one from each file) and save them as a single sequence FASTA file:
+
 ```{r}
-extract_first_fasta <- function(fasta_file) {
-  lines <- readLines(fasta_file)
-  header_indices <- which(substr(lines, 1, 1) == ">")
-  header_idx <- header_indices[1]
-  seq_lines <- lines[(header_idx + 1)]
-  seq <- paste(seq_lines, collapse = "")
+lines <- readLines("FAP_BLAST.fas")
+
+h_idx <- which(substr(lines, 1, 1) == ">")[1]
+h_idx_2 <- which(substr(lines, 1, 1) == ">")[2]
+if (is.na(h_idx_2)) {
+  h_idx_2 <- length(lines) + 1
 }
 
+#Extract the sequence and the name
+seq <- paste(lines[(h_idx + 1):(h_idx_2 - 1)], collapse = "")
+name <- sub(">", "", lines[h_idx])
 
-# Extract first sequence and export
-result <- extract_first_fasta("FAP_BLAST.fas")
+fasta_content <- paste0(">", name, "\n", seq, "\n")
 
-# Create FASTA format for ColabFold
-fasta_content <- paste0(
-  ">", result$name, "\n",
-  result$sequence, "\n"
-)
+# Save to file
+writeLines(fasta_content, "01sequence_input.fasta")
 
-# Save
-writeLines(fasta_content, "01_alphafold_input.fasta")
+cat("✓ FASTA file created: 01sequence_input.fasta\n")
+
+#Show the content
+cat("File content (first 300 characters):\n")
+cat(substr(fasta_content, 1, 300), "\n")
+if (nchar(fasta_content) > 300) {
+  cat("... [", nchar(seq), " bp total]\n")
+}
+
 ```
-
 
 
 \newpage

@@ -69,7 +69,10 @@ for (pkg in packages) {
     }
   }
 }
+
+devtools::install_github("jbisanz/qiime2R")
 ```
+
 
 ## Then load the required packages:
 ```{r load_libraries, eval=FALSE}
@@ -87,7 +90,7 @@ library(msa)
 
 ## First we import our data and have a look at it:
 The data is taken from the TUGraz TeachCenter Course: Laboratory Course Bioninformatics/Metagenomics
-```{r, echo=FALSE}
+```{r}
 featureTableFile <- "data2/table.qza"
 taxonomyTableFile <- "data2/taxonomy.qza"
 sampleMetaFile <- "data2/metadata.tsv"
@@ -395,12 +398,9 @@ if (nchar(fasta_content) > 300) {
 \newpage
 
 References
-=======
+
 ## Improving the plot
 Since this plot is visually not very appealing and hard to compell, we try to improve it and make it more user-friendly: 
 ```{r}
 
 ```
-
-
-

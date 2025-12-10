@@ -19,6 +19,7 @@ output:
     toc: true
     toc_depth: '2'
     df_print: paged
+    number_sections: true
 fontsize: 11pt
 geometry: margin=1in
 ---
@@ -65,7 +66,8 @@ packages <- c("TreeSummarizedExperiment", "scater", "mia", "miaViz",
 for (pkg in packages) {
   if (!requireNamespace(pkg, quietly = TRUE)) {
     if (pkg %in% c("TreeSummarizedExperiment", 
-                   "scater", "mia", "miaViz", "miaQIIME2", "devtools", "rentrez")) {
+                   "scater", "mia", "miaViz", "miaQIIME2", 
+                   "devtools", "rentrez")) {
       if (!requireNamespace("BiocManager", quietly = TRUE)) {
         install.packages("BiocManager")
       }
@@ -113,7 +115,7 @@ tse <- importQIIME2(
 ```
 
 ## Then we plot a basic abundance plot:
-```{r,out.width="85%"}
+```{r,out.width="85%", fig.cap=' Basic relative abundance of bacterial classes across all microbiome samples '}
 p_class_basic <- plotAbundance(tse, assay.type="counts", group = "class")
 print(p_class_basic)
 ```
@@ -125,7 +127,7 @@ The basic plot, while informative, is challenging to interpret due to:
 
 ## Improvements:
 Since this plot seems rather difficult to interpret, we will change a few parameters to hopefully make it more readable:
-```{r, out.width="85%"}
+```{r, out.width="85%", fig.cap=' Bacterial class composition by environment and anemone genotype (AIMS1 vs AIMS4, improved '}
 p_class <- plotAbundance(tse, assay.type="counts", group = "class", 
                          color_by = "Environment") +
   facet_wrap(~Genotype) +
@@ -196,13 +198,16 @@ As we added the alpha diversity, we can proceed with performing the statistical 
 ## Statistical Testing
 ### Genotype significance
 First, we want to have a look at the genotype:
-```{r, out.width="85%"}
+```{r, out.width="85%", fig.cap=' Shannon alpha diversity boxplot stratified by anemone genotype '}
 p_shannon_genotype <- plotColData(tse, "shannon_diversity", "Genotype",
                                    colour_by = "Environment", show_median = TRUE) +
   labs(x = "Genotype", 
        title = "Shannon Diversity by Genotype")
-
 plot(shannon_diversity ~ Genotype, col_dat)
+```
+
+```{r, out.width="85%", fig.cap=' Shannon alpha diversity violinplot stratified by anemone genotype'}
+
 #If needed, we can save it:
 #ggsave("figures/Shannon_div_Genty.png", p_shannon_genotype,
 #       width = 14, height = 10, dpi = 300)
@@ -243,13 +248,16 @@ aims4_mean <- mean(col_dat[col_dat$Genotype == "AIMS4", "shannon_diversity"], na
 ## Environmental significance
 
 After comparing the genotype, we also want to have a look at the environment:
-```{r, out.width="85%"}
+```{r, out.width="85%", fig.cap=' Shannon alpha diversity boxplot across control vs sterile seawater conditions by environmental conditions'}
 p_shannon_environment <- plotColData(tse, "shannon_diversity", "Environment",
                                       colour_by = "Genotype", show_median = TRUE) +
   labs(x = "Environment", 
        title = "Shannon Diversity by Environment")
 
 plot(shannon_diversity ~ Environment, col_dat)
+```
+
+```{r, out.width="85%", fig.cap=' Shannon alpha diversity violinplot across control vs sterile seawater conditions by environmental conditions'}
 #If needed, we can save it:
 #ggsave("figures/Shannon_div_Env.png", p_shannon_environment,
 #       width = 14, height = 10, dpi = 300)
@@ -296,12 +304,14 @@ knitr::kable(p_value_summary, digits = 6,
 
 For faster and easier handling, we graphically confirmed our results by creating plots:
 
-```{r, out.width="85%"}
+```{r, out.width="85%", fig.cap=' Comparison Shannon alpha diversity violinplot across genotype AIMS1 vs AIMS4 '}
 p_shannon <- plotColData(tse, "shannon_diversity", "Genotype",
-                          colour_by = "Environment", show_median = TRUE) +
+                          colour_by = "Environment", show_median = TRUE,) +
   labs(x = "Genotype")
 p_shannon
+```
 
+```{r, out.width="85%", fig.cap=' Comparison Shannon alpha diversity violinplot across control vs sterile seawater conditions by environmental conditions'}
 p_shannon <- plotColData(tse, "shannon_diversity", "Environment",
                           colour_by = "Genotype", show_median = TRUE) +
   labs(x = "Environment")
@@ -380,7 +390,7 @@ This is now the first FASTA we can use for protein structure prediction. The sec
 
 ```{r,eval=FALSE}
 # Enter your desired accession number. 
-#In *sequence*, change nuccore=DNA/RNA;protein=protein sequence
+#In sequence, change nuccore=DNA/RNA;protein=protein sequence
 
 target_accession <- "XP_001703004"
 
@@ -435,7 +445,7 @@ Since we use the newest version of Python (3.14), which is not compatible with C
 ## PyMol
 After running the structure prediction and downloading the PDB files, they were fetched into PyMol and edited. The finished graph is shown below and also the code that lead to the code:
 
-```{r, echo=FALSE, out.width="85%", fig.cap=' Predicted structures of Seq01 and Seq02 aligned. All cysteine residues are displayed as cyanic spheres '}
+```{r, echo=FALSE, out.width="85%", fig.cap=' ColabFold-predicted structures of fatty acid photodecarboxylase homologs with cysteine residues highlighted '}
 knitr::include_graphics("Alignment_01Seq_02_Seq.png")
 ```
 

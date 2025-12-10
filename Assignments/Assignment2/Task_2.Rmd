@@ -5,6 +5,10 @@ date: "`r Sys.Date()`"
 bibliography: packages2.bib
 nocite: '@*'
 output:
+  html_document:
+    toc: true
+    toc_depth: '2'
+    df_print: paged
   pdf_document:
     latex_engine: xelatex
     extra_dependencies: ["float"]
@@ -15,10 +19,6 @@ output:
     fig_height: 5
     fig_caption: true
     keep_tex: false
-  html_document:
-    toc: true
-    toc_depth: '2'
-    df_print: paged
 fontsize: 11pt
 geometry: margin=1in
 ---
@@ -41,6 +41,7 @@ library(patchwork)
 library(vegan)
 library(ggplot2)
 library(tidyverse)
+library(rentrez)
 
 knitr::write_bib(c("TreeSummarizedExperiment", "scater", "mia", "miaViz", 
               "patchwork", "vegan", "ggplot2", "tidyverse", "ape", "phangorn", "msa", "miaQIIME2"), file = 'packages2.bib')
@@ -49,17 +50,17 @@ knitr::write_bib(c("TreeSummarizedExperiment", "scater", "mia", "miaViz",
 \newpage
 
 
-# Microbiome (Taxonomic) Analysis
+# Part 1: Microbiome (Taxonomic) Analysis
 ## Installing Required Packages (if not already installed):
 
 ```{r install_packages, eval=FALSE}
 packages <- c("TreeSummarizedExperiment", "scater", "mia", "miaViz", 
               "patchwork", "vegan", "ggplot2", "tidyverse", "miaQIIME2", 
-              "ape", "phangorn", "msa", "bluster", "devtools")
+              "ape", "phangorn", "msa", "bluster", "devtools", "rentrez")
 
 for (pkg in packages) {
   if (!requireNamespace(pkg, quietly = TRUE)) {
-    if (pkg %in% c("TreeSummarizedExperiment", "scater", "mia", "miaViz", "miaQIIME2", "devtools")) {
+    if (pkg %in% c("TreeSummarizedExperiment", "scater", "mia", "miaViz", "miaQIIME2", "devtools", "rentrez")) {
       if (!requireNamespace("BiocManager", quietly = TRUE)) {
         install.packages("BiocManager")
       }
@@ -85,6 +86,7 @@ library(ggplot2)
 library(tidyverse)
 library(qiime2R)
 library(msa)
+library(rentrez)
 ```
 
 
@@ -162,7 +164,6 @@ For further statistical analysis, we need to add alpha diversity values. First, 
 index <- c("coverage", "inverse_simpson", "gini", "shannon_diversity")
 tse <- addAlpha(tse, index = index)
 
-cat("Alpha diversity indices added to the object:\n")
 print(colnames(colData(tse)))
 ```
 Secondly, we extract column data and create a data frame for easier handling. To verify, we display the column headers:
@@ -173,16 +174,12 @@ col_dat$Environment <- factor(col_dat$Environment)
 
 diversity_data <- as.data.frame(col_dat)
 
-cat("Diversity data structure:\n")
 available_cols <- intersect(c("ID", "Genotype", "Environment", 
                               "shannon_diversity", "coverage",
                               "inverse_simpson", "gini"),
                            colnames(diversity_data))
 print(head(diversity_data[, available_cols]))
 
-# Summary statistics
-cat("\n\nSummary statistics for diversity measures:\n")
-print(summary(diversity_data[, available_cols[-1: -6]]))
 ```
 
 Alpha diversity measures quantify microbial community diversity within individual samples. Different indices emphasize different aspects:
@@ -236,12 +233,8 @@ gen_means <- data.frame(measure = character(), AIMS1 = numeric(),
 names(gen_pvalues) <- diversity_measures
 
 
-cat("\nEffect size:\n")
 aims1_mean <- mean(col_dat[col_dat$Genotype == "AIMS1", "shannon_diversity"], na.rm = TRUE)
 aims4_mean <- mean(col_dat[col_dat$Genotype == "AIMS4", "shannon_diversity"], na.rm = TRUE)
-cat("AIMS1 mean Shannon diversity:", round(aims1_mean, 3), "\n")
-cat("AIMS4 mean Shannon diversity:", round(aims4_mean, 3), "\n")
-cat("Difference:", round(abs(aims1_mean - aims4_mean), 3), "\n")
 ```
 
 
@@ -276,12 +269,8 @@ env_means <- data.frame(measure = character(), Control = numeric(),
 
 names(env_pvalues) <- diversity_measures
 
-cat("\nEffect size:\n")
 aims1_mean <- mean(col_dat[col_dat$Genotype == "AIMS1", "shannon_diversity"], na.rm = TRUE)
 aims4_mean <- mean(col_dat[col_dat$Genotype == "AIMS4", "shannon_diversity"], na.rm = TRUE)
-cat("AIMS1 mean Shannon diversity:", round(aims1_mean, 3), "\n")
-cat("AIMS4 mean Shannon diversity:", round(aims4_mean, 3), "\n")
-cat("Difference:", round(abs(aims1_mean - aims4_mean), 3), "\n")
 ```
 
 For a better overview, we created a table:
@@ -298,9 +287,6 @@ p_value_summary <- data.frame(
   Gen_Significant = ifelse(gen_pvalues < 0.05, "Yes ***", "No")
 )
 
-cat("\n========================================\n")
-cat("SUMMARY TABLE: P-VALUE RESULTS (α = 0.05)\n")
-cat("========================================\n\n")
 print(knitr::kable(p_value_summary,
                    caption = "Summary of T-test Results: P-values for Environment and Genotype Effects"))
 ```
@@ -383,24 +369,68 @@ fasta_content <- paste0(">", name, "\n", seq, "\n")
 # Save to file
 writeLines(fasta_content, "01sequence_input.fasta")
 
-cat("✓ FASTA file created: 01sequence_input.fasta\n")
+cat("FASTA file created: 01sequence_input.fasta\n")
 
-#Show the content
-cat("File content (first 300 characters):\n")
-cat(substr(fasta_content, 1, 300), "\n")
-if (nchar(fasta_content) > 300) {
-  cat("... [", nchar(seq), " bp total]\n")
+```
+
+This is now the first FASTA we can use for protein structure prediction. The second we can fetch from the database:
+
+```{r}
+# Enter your desired accession number. In *sequence*, change nuccore=DNA/RNA;protein=protein sequence
+
+target_accession <- "XP_001703004"
+
+sequence <- entrez_fetch(db = "protein", 
+                        id = target_accession, 
+                        rettype = "fasta")
+
+write(sequence, file = "02sequence_input.fasta")
+
+```
+
+We now have the two sequences that we can use for structure prediction. Let's predict them now using ColabFold
+
+
+#Part 2: Protein structure prediction
+##Installing ColabFold
+For the sake of easy use and not needing to go to the internet every time, we try to implement ColabFold using R:
+
+```{bash, eval=FALSE}
+python -m pip install --upgrade pip
+python -m pip install colabfold
+python -m colabfold.batch --help
+
+```
+
+```{r, eval=FALSE}
+predict_structure_colabfold <- function(fasta_file, output_dir = "./predictions") {
+  
+  if (!dir.exists(output_dir)) {
+    dir.create(output_dir, recursive = TRUE)
+  }
+  
+  cmd <- paste("python -m colabfold.batch", fasta_file, output_dir)
+  
+  result <- system(cmd)
+  
+  if (result == 0) {
+    pdb_files <- list.files(output_dir, pattern = "\\.pdb$", full.names = TRUE)
+    cat("✓ Success! PDB file:", pdb_files[1], "\n")
+    return(pdb_files[1])
+  } else {
+    cat("✗ Prediction failed\n")
+    return(NULL)
+  }
 }
 
 ```
 
 
+
+Since we use the newest version of Python (3.14), which is not compatible with ColabFold's newest version, one may install a python version of up to 3.10 and run everything again and get the pdb files. Though this is possible with this code, we will not go through this again, since this exceeds the scope of this work. 
+
+
+
 \newpage
 
 References
-
-## Improving the plot
-Since this plot is visually not very appealing and hard to compell, we try to improve it and make it more user-friendly: 
-```{r}
-
-```

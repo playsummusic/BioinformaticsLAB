@@ -5,6 +5,10 @@ date: "`r Sys.Date()`"
 bibliography: packages2.bib
 nocite: '@*'
 output:
+  html_document:
+    toc: true
+    toc_depth: '2'
+    df_print: paged
   pdf_document:
     latex_engine: xelatex
     extra_dependencies: ["float"]
@@ -15,10 +19,6 @@ output:
     fig_height: 5
     fig_caption: true
     keep_tex: false
-  html_document:
-    toc: true
-    toc_depth: '2'
-    df_print: paged
 fontsize: 11pt
 geometry: margin=1in
 ---
@@ -430,11 +430,21 @@ Since we use the newest version of Python (3.14), which is not compatible with C
 ## PyMol
 After running the structure prediction and downloading the PDB files, they were fetched into PyMol and edited. The finished graph is shown below and also the code that lead to the code:
 
-```{r, echo=FALSE, out.width="85%, fig.cap="Predicted structures of Seq01 and Seq02 aligned. All cysteine residues are displayed as cyanic spheres}
+```{r, echo=FALSE, out.width="85%", fig.cap=' Predicted structures of Seq01 and Seq02 aligned. All cysteine residues are displayed as cyanic spheres '}
 knitr::include_graphics("Alignment_01Seq_02_Seq.png")
 ```
 
+For this view, the following commands were used in the following order after opening the two structure predictions:
 
+```
+align 01sequence_input, 02sequence_input
+bg_color white
+show spheres, resn cys
+select resn cys
+color greencyan, resn cys
+
+```
+By using commands like show (spheres, dorts, cartoon, ribbon) and color (red, green, yellow, cyan), the design and representation for certain compounds like certain residues (resn ala/cys/phe for example) or also for pLDDT scores may be achieved.
 
 \newpage
 

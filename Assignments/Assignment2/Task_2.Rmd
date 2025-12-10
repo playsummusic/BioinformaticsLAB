@@ -110,7 +110,7 @@ tse <- importQIIME2(
 ```
 
 ## Then we plot a basic abundance plot:
-```{r}
+```{r,out.width="85%"}
 p_class_basic <- plotAbundance(tse, assay.type="counts", group = "class")
 print(p_class_basic)
 ```
@@ -122,7 +122,7 @@ The basic plot, while informative, is challenging to interpret due to:
 
 ## Improvements:
 Since this plot seems rather difficult to interpret, we will change a few parameters to hopefully make it more readable:
-```{r}
+```{r, out.width="85%"}
 p_class <- plotAbundance(tse, assay.type="counts", group = "class", 
                          color_by = "Environment") +
   facet_wrap(~Genotype) +
@@ -193,7 +193,7 @@ As we added the alpha diversity, we can proceed with performing the statistical 
 ## Statistical Testing
 ### Genotype significance
 First, we want to have a look at the genotype:
-```{r}
+```{r, out.width="85%"}
 p_shannon_genotype <- plotColData(tse, "shannon_diversity", "Genotype",
                                    colour_by = "Environment", show_median = TRUE) +
   labs(x = "Genotype", 
@@ -240,7 +240,7 @@ aims4_mean <- mean(col_dat[col_dat$Genotype == "AIMS4", "shannon_diversity"], na
 ## Environmental significance
 
 After comparing the genotype, we also want to have a look at the environment:
-```{r}
+```{r, out.width="85%"}
 p_shannon_environment <- plotColData(tse, "shannon_diversity", "Environment",
                                       colour_by = "Genotype", show_median = TRUE) +
   labs(x = "Environment", 
@@ -274,7 +274,7 @@ aims4_mean <- mean(col_dat[col_dat$Genotype == "AIMS4", "shannon_diversity"], na
 
 For a better overview, we created a table:
 
-```{r}
+```{r, out.width="85%"}
 # Create comprehensive summary table
 diversity_measures <- c("shannon_diversity", "faith_diversity", "coverage", 
                         "inverse_simpson", "gini")
@@ -292,7 +292,7 @@ print(knitr::kable(p_value_summary, digits = 6,
 
 For faster and easier handling, we graphically confirmed our results by creating plots:
 
-```{r}
+```{r, out.width="85%"}
 p_shannon <- plotColData(tse, "shannon_diversity", "Genotype",
                           colour_by = "Environment", show_median = TRUE) +
   labs(x = "Genotype")

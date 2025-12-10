@@ -390,8 +390,8 @@ write(sequence, file = "02sequence_input.fasta")
 We now have the two sequences that we can use for structure prediction. Let's predict them now using ColabFold
 
 
-#Part 2: Protein structure prediction
-##Installing ColabFold
+# Part 2: Protein structure prediction
+## Installing ColabFold
 For the sake of easy use and not needing to go to the internet every time, we try to implement ColabFold using R:
 
 ```{bash, eval=FALSE}
@@ -427,11 +427,11 @@ predict_structure_colabfold <- function(fasta_file, output_dir = "./predictions"
 
 Since we use the newest version of Python (3.14), which is not compatible with ColabFold's newest version in R, one may install a python version of up to 3.10 and run everything again and get the pdb files. Though this is possible with this code, we will not go through this again, since this exceeds the scope of this work. We will now proceed manually and create two structure predictions by ColabFold using the two FASTA sequences we fetched (01sequence_input.fasta & 02sequence_input.fasta).
 
-##PyMol
+## PyMol
 After running the structure prediction and downloading the PDB files, they were fetched into PyMol and edited. The finished graph is shown below and also the code that lead to the code:
 
-```{r, eval=FALSE, fig.cap=ColabFold structural predictions for two sequences from accession number: XP_001703004.1. Structures are aligned and all cysteine residues are shown in}
-knitr::include_graphics()
+```{r, echo=FALSE, out.width="85%, fig.cap="Predicted structures of Seq01 and Seq02 aligned. All cysteine residues are displayed as cyanic spheres}
+knitr::include_graphics("Alignment_01Seq_02_Seq.png")
 ```
 
 

@@ -2,7 +2,7 @@
 title: "Task 3: RNA-seq Differential Gene Expression & RNA-seq Functional Profiling"
 author: 'Simon Safron [Mn: 11923407], Alexander Veith [Mn: 12122739], Miriam Überbacher [Mn:01627576]'
 date: "`r Sys.Date()`"
-bibliography: [references.bib, packages.bib]
+bibliography: [packages.bib]
 csl: https://raw.githubusercontent.com/citation-style-language/styles/master/ieee.csl
 nocite: '@*'
 output:
@@ -287,15 +287,16 @@ tgt + Nickel: The tgt knock out stais the same but now Nickel is added. This sho
 ```{r, eval=FALSE}
 # if you work on your own PC install the packages first
 BiocManager::install(c("clusterProfiler"))
-ainstall.packages("tidyverse")
-
+install.packages("tidyverse")
+BiocManager::install("org.EcK12.eg.db")
 install.packages("devtools")
 devtools::install_github('kevinblighe/EnhancedVolcano')
 ```
 
-```{r, eval=FALSE}
+```{r, eval=TRUE}
 library(EnhancedVolcano)
-
+library(AnnotationDbi)
+library(org.EcK12.eg.db)
 library(clusterProfiler)
 library(tidyverse)
 library(ggplot2)
@@ -303,7 +304,7 @@ library(ggplot2)
 
 
 
-```{r, eval=FALSE}
+```{r}
 ### load the data with read delim, because it is tab seperated
 annotatedRawCounts <- read_delim("Counts_raw.tsv")
 

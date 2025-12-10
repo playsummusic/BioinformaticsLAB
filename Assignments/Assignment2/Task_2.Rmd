@@ -5,13 +5,9 @@ date: "`r Sys.Date()`"
 bibliography: packages2.bib
 nocite: '@*'
 output:
-  html_document:
-    toc: true
-    toc_depth: '2'
-    df_print: paged
   pdf_document:
     latex_engine: xelatex
-    extra_dependencies: ["float"]
+    extra_dependencies: ["float","xcolor", "colortbl"]
     toc: true
     toc_depth: 2
     number_sections: true
@@ -19,6 +15,10 @@ output:
     fig_height: 5
     fig_caption: true
     keep_tex: false
+  html_document:
+    toc: true
+    toc_depth: '2'
+    df_print: paged
 fontsize: 11pt
 geometry: margin=1in
 ---
@@ -44,9 +44,11 @@ library(vegan)
 library(ggplot2)
 library(tidyverse)
 library(rentrez)
+library(knitr)
+library(kableExtra)
 
 knitr::write_bib(c("TreeSummarizedExperiment", "scater", "mia", "miaViz", 
-              "patchwork", "vegan", "ggplot2", "tidyverse", "ape", "phangorn", "msa", "miaQIIME2"), file = 'packages2.bib')
+              "patchwork", "vegan", "ggplot2", "tidyverse", "ape", "phangorn", "msa", "miaQIIME2", "knitr", "kableExtra"), file = 'packages2.bib')
 
 ```
 \newpage
@@ -62,7 +64,8 @@ packages <- c("TreeSummarizedExperiment", "scater", "mia", "miaViz",
 
 for (pkg in packages) {
   if (!requireNamespace(pkg, quietly = TRUE)) {
-    if (pkg %in% c("TreeSummarizedExperiment", "scater", "mia", "miaViz", "miaQIIME2", "devtools", "rentrez")) {
+    if (pkg %in% c("TreeSummarizedExperiment", 
+                   "scater", "mia", "miaViz", "miaQIIME2", "devtools", "rentrez")) {
       if (!requireNamespace("BiocManager", quietly = TRUE)) {
         install.packages("BiocManager")
       }
@@ -274,7 +277,7 @@ aims4_mean <- mean(col_dat[col_dat$Genotype == "AIMS4", "shannon_diversity"], na
 
 For a better overview, we created a table:
 
-```{r, out.width="85%"}
+```{r}
 # Create comprehensive summary table
 diversity_measures <- c("shannon_diversity", "faith_diversity", "coverage", 
                         "inverse_simpson", "gini")
@@ -286,8 +289,9 @@ p_value_summary <- data.frame(
   Gen_Significant = ifelse(gen_pvalues < 0.05, "Yes ***", "No")
 )
 
-print(knitr::kable(p_value_summary, digits = 6,
-                   caption = "Summary of T-test Results: P-values for Environment and Genotype Effects"))
+knitr::kable(p_value_summary, digits = 6,
+                   caption = "Summary of T-test Results: P-values for Environment and Genotype Effects") %>%
+  kableExtra::kable_styling(font_size = 8)
 ```
 
 For faster and easier handling, we graphically confirmed our results by creating plots:
@@ -375,7 +379,8 @@ cat("FASTA file created: 01sequence_input.fasta\n")
 This is now the first FASTA we can use for protein structure prediction. The second we can fetch from the database:
 
 ```{r,eval=FALSE}
-# Enter your desired accession number. In *sequence*, change nuccore=DNA/RNA;protein=protein sequence
+# Enter your desired accession number. 
+#In *sequence*, change nuccore=DNA/RNA;protein=protein sequence
 
 target_accession <- "XP_001703004"
 

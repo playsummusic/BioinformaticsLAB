@@ -140,7 +140,7 @@ dim(rawCounts[rowSums(rawCounts) > 10, ])
 
 Interpreting the summary:
 
-a)  How many genes are significantly up-regulated and how many are significatnly down-regulated in the nickel treated WT strain as compared to the untreated WT strain, using the default cutoff for the adjusted p-value?
+a)  How many genes are significantly up-regulated and how many are significantly down-regulated in the nickel treated WT strain as compared to the untreated WT strain, using the default cutoff for the adjusted p-value?
 
 ```{r, eval=FALSE}
 # Extract results with default alpha (0.1)
@@ -279,6 +279,95 @@ Wild type + Nickel: tgt is transcriptionally repressed by nickel stress. Expecte
 tgt + none: The tgt gene is deleted so No functional tgt should be transcribed. Expected counts are going to be very low to near zero.
 
 tgt + Nickel: The tgt knock out stais the same but now Nickel is added. This should not have a significant affect on the already very low to near zero counts.
+
+
+# Part 2: Functional Analysis and Vizualisation
+# Setup
+
+```{r, eval=FALSE}
+# if you work on your own PC install the packages first
+BiocManager::install(c("clusterProfiler"))
+ainstall.packages("tidyverse")
+
+install.packages("devtools")
+devtools::install_github('kevinblighe/EnhancedVolcano')
+```
+
+```{r, eval=FALSE}
+library(EnhancedVolcano)
+
+library(clusterProfiler)
+library(tidyverse)
+library(ggplot2)
+```
+
+
+
+```{r, eval=FALSE}
+### load the data with read delim, because it is tab seperated
+annotatedRawCounts <- read_delim("Counts_raw.tsv")
+
+head(annotatedRawCounts)
+### Use column ID as rownames, rownames can be used for indexing
+annotatedRawCounts <- annotatedRawCounts  %>% 
+  column_to_rownames(var = "ID")
+
+### split data into rawCounts and Annotations
+rawCounts <- annotatedRawCounts[,3:14]
+annotations <- annotatedRawCounts[,1:2]
+
+#Read in the results from yesterday
+DESeq2ResultsDF <- read_delim("DESeq2Result_treatment.tsv")
+```
+
+## Gene annotation
+
+a)  If you look closely at the 21 OrgDB packes, there are 2 different packages for E. coli. Which one should we use? 
+
+**Answer:** Since we are working with E. coli K12 MG1655 it would make sense to use the genome wide annotation package for E.coli K12  (org.EcK12.eg.db)
+
+```{r, echo=FALSE, out.width="85%", fig.cap='Website of the used database for E.coli K12.'}
+knitr::include_graphics("database.png")
+```
+
+```{r, eval=FALSE}
+BiocManager::install("org.EcK12.eg.db")
+
+library(org.EcK12.eg.db)
+```
+
+c)  List the different available keytypes/identifiers.
+
+**Answer:** The different keytypes and identifiers are:
+```{r}
+#gene names/identifiers
+genes <- annotations$gene
+head(genes,10)
+
+#View all available keytypes
+keytypes(org.EcK12.eg.db)
+```
+
+
+```{r}
+#View first couple of keys for type GENENAME
+keys <-  keys(org.EcK12.eg.db, keytype = "GENENAME")
+head(keys,10)
+
+#make sure our IDs are contained in the keys
+#prints the number of genes that are found within the keys
+sum(genes %in% keys)
+
+##################################
+#Try out other keytypes until you find one that contains "almost" all genes
+keys <- keys(org.EcK12.eg.db, keytype = "GENENAME")
+head(keys)
+
+#make sure our IDs are contained in the keys
+#prints the number of genes that are found within the keys
+sum(genes %in% keys)
+```
+
 
 \newpage
 

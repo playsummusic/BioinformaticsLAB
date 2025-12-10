@@ -1,0 +1,1504 @@
+---
+title: "Differential Gene Expression and Functional Profiling Analysis: Queuosine Study in E. coli"
+author: "Laboratory Course Bioinformatics 2025"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    theme: united
+    highlight: tango
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, fig.width=10, fig.height=7)
+```
+
+# PART I: BACKGROUND AND THEORETICAL FOUNDATION
+
+## 1. Introduction to Differential Gene Expression (DGE) Analysis
+
+### 1.1 Overview and Objectives
+
+Differential gene expression analysis identifies statistically significant changes in transcript abundance between different biological conditions. This laboratory course focuses on the **queuosine (Q) tRNA modification study** in *Escherichia coli* K-12 MG1655, examining how Q deficiency affects metal homeostasis and stress responses.
+
+**Key Learning Objectives:**
+- Understand the complete RNA-seq workflow from raw reads to functional interpretation
+- Implement quality control at multiple analysis stages
+- Apply DESeq2 for statistical testing of differential expression
+- Interpret biological significance of results
+- Perform Gene Ontology enrichment analysis for functional profiling
+
+### 1.2 The Queuosine Study: Biological Context
+
+**Queuosine (Q) - A Modified Nucleoside:**
+- Rare hypermodification of tRNA at wobble position (position 34) of GUN anticodons
+- Only synthesized by bacteria (and some eukaryotes)
+- Encoded by *tgt* gene (tRNA-guanine transglycosylase)
+- Affects codon decoding at position 3 (wobble pairing)
+
+**Biological Significance:**
+- Q enables standard Watson-Crick pairing with CAC (histidine mRNA)
+- Q enables wobble pairing with CAU (alternative codon)
+- Q deficiency leads to pleiotropic phenotypes affecting metal homeostasis and oxidative stress responses
+
+**Experimental Design:**
+
+| Factor | Levels |
+|--------|--------|
+| **Strain** | WT (wild-type), TGT (tgt knockout) |
+| **Treatment** | None (control, LB medium), Nickel (2 mM NiCl₂·6H₂O) |
+| **Replicates** | 3 biological replicates per condition |
+| **Total Samples** | 4 groups × 3 replicates = 12 samples |
+
+**Research Questions:**
+1. How does Q deficiency affect gene expression in normal conditions?
+2. How does nickel stress affect gene expression in WT vs. TGT strains?
+3. What functional processes are enriched among differentially expressed genes?
+4. How does Q regulate metal homeostasis and stress responses?
+
+---
+
+## 2. RNA-Seq Workflow and Experimental Pipeline
+
+### 2.1 Sample Preparation and Library Construction
+
+**RNA Extraction:**
+- Total RNA isolated from bacterial cultures
+- Quality control: RNA integrity assessment (RIN score, 260/280 ratio)
+- Quantity: Sufficient material for sequencing (typically >100 ng)
+
+**Library Preparation Strategy:**
+
+For bacterial RNA-seq (used in this study):
+- **rRNA Depletion** (Ribo-Zero Magnetic Kit)
+  - Removes ~90% of total RNA (ribosomal RNA)
+  - Allows detection of non-coding RNAs (if present)
+  - Essential for bacteria (polyA tail not standard)
+  
+vs. Eukaryotic approach:
+- **PolyA Selection** (oligodT affinity)
+  - Specifically enriches mature mRNAs
+  - Only for organisms with polyadenylated transcripts
+  - More cost-effective for mRNA-only studies
+
+**cDNA Synthesis and Library Prep:**
+1. RNA fragmentation (create short, mappable fragments)
+2. Reverse transcription (RNA → cDNA)
+3. Second-strand synthesis
+4. Adapter ligation (Illumina sequencing adapters)
+5. PCR amplification (prepare for sequencing)
+
+### 2.2 Sequencing Parameters
+
+**Selected Parameters for This Study:**
+
+| Parameter | Value | Rationale |
+|-----------|-------|-----------|
+| **Platform** | Illumina | Gold standard, cost-effective, well-documented |
+| **Read Type** | Paired-end | Better mapping accuracy, junction detection |
+| **Read Length** | 75 bp | Adequate for uniqueness in bacterial genomes |
+| **Sequencing Depth** | 40 million reads/sample | Sufficient for bacterial gene detection |
+| **Strand Specificity** | Not strand-specific | Trade-off: cost vs. precision (acceptable for well-annotated genomes) |
+
+### 2.3 Data Retrieval and Reference Genomes
+
+**Raw Sequencing Reads:**
+- **Source**: NCBI BioProject PRJNA751097
+- **Database Options**:
+  - NCBI SRA (Sequence Read Archive)
+  - EMBL-EBI ENA (European Nucleotide Archive) - preferred for direct FASTQ download
+  
+**Reference Genome and Annotation:**
+- **Organism**: *Escherichia coli* K-12 MG1655
+- **Reference**: GCF_000005845.2 (NCBI Datasets)
+- **Annotation**: GFF file with gene coordinates and features
+- **Gene Count**: ~4,300 protein-coding genes
+
+---
+
+## 3. Read Processing and Quality Control
+
+### 3.1 Quality Control Steps
+
+**Step 1: Raw Read QC (FastQC)**
+- Per-base quality scores (Phred quality, Q ≥ 30 preferred)
+- GC content distribution (expect normal distribution)
+- Adapter contamination detection
+- k-mer overrepresentation
+- Sequence length uniformity
+
+**Step 2: Read Mapping QC (STAR, Qualimap)**
+- Mapping rate (>95% acceptable)
+- Uniquely mapped reads (>85% expected)
+- Multi-mapped reads (<5% in bacterial genome)
+- Insert size distribution (quality check for paired-end)
+- Strand balance (if strand-specific)
+
+**Step 3: Integration (MultiQC)**
+- Aggregates QC from all samples
+- Facilitates sample comparison
+- Highlights potential batch effects or quality issues
+
+### 3.2 Read Alignment Strategy
+
+**STAR Aligner (Splicing Transcription Alignment from RNA-seq):**
+
+*Note: Bacterial genomes lack splicing, but STAR still performs optimally*
+
+**Algorithm Overview:**
+1. **Seed Searching**: Find maximal matches (seed length ≥ 19 bp)
+2. **Seed Cluster Merging**: Extend seeds to ungapped alignments
+3. **Gapped Alignment**: Smith-Waterman algorithm for gaps and mismatches
+4. **SAM Output**: Standardized alignment format (BAM: binary compressed)
+
+**Quality Metrics:**
+- Phred-like mapping quality score (MAPQ)
+- MAPQ ≥ 20: Acceptable confidence for unique mapping
+- MAPQ < 20: Ambiguous mapping (often filtered or downweighted)
+
+### 3.3 Read Counting (HTSeq-count)
+
+**Purpose**: Assign mapped reads to genomic features (genes)
+
+**Counting Modes** (intersection vs. union):
+
+The challenge: A single read may overlap multiple features or none
+
+```
+Three available modes:
+
+1. UNION (most lenient)
+   - Read counted if overlaps ANY exon
+   - Generates more counts
+   - May conflate isoforms
+
+2. INTERSECTION-STRICT (most stringent)
+   - Read counted ONLY if completely contained in one feature
+   - Generates fewer counts
+   - Minimizes ambiguity
+
+3. INTERSECTION-NONEMPTY (middle ground)
+   - Default; used in this study
+   - Tolerates small overlaps with multiple features
+   - Balances sensitivity and specificity
+```
+
+**Standard Settings (This Study):**
+- Mode: intersection-nonempty (default)
+- Ambiguous reads: NOT counted
+- Multi-mapped reads: NOT counted
+- Strand-specific: NO (libraries not strand-specific)
+
+**Output**: Count table (genes × samples)
+
+---
+
+## PART II: STATISTICAL ANALYSIS WITH DESeq2
+
+## 4. DESeq2: Theory and Implementation
+
+### 4.1 Statistical Framework
+
+**Null Hypothesis (H₀):**
+- For each gene: No difference in expression between conditions
+- Any observed difference is due to random variation
+
+**Alternative Hypothesis (H₁):**
+- Expression differs significantly between conditions
+- Difference exceeds expected random variation
+
+### 4.2 Negative Binomial Distribution
+
+DESeq2 models count data using **negative binomial distribution**:
+
+**Why NB instead of Poisson?**
+
+Poisson assumes: Variance = Mean
+RNA-seq reality: Variance >> Mean (overdispersion)
+
+**Negative Binomial:**
+- Parameter α (alpha) = dispersion parameter
+- Variance = μ + α·μ²
+- Extra flexibility to capture biological + technical variance
+
+**Mathematical Form:**
+$$P(K_i = k | \mu_i, \alpha_i) = \frac{\Gamma(k + 1/\alpha_i)}{\Gamma(k+1)\Gamma(1/\alpha_i)} \left(\frac{1}{1+\alpha_i \mu_i}\right)^{1/\alpha_i} \left(\frac{\alpha_i \mu_i}{1+\alpha_i \mu_i}\right)^k$$
+
+### 4.3 Size Factor Estimation
+
+**Problem**: Samples have different sequencing depths
+- Sample A: 50 million reads
+- Sample B: 40 million reads
+- Counts not directly comparable without normalization
+
+**DESeq2 Solution: Median-of-Ratios Method**
+
+1. For each gene: Calculate geometric mean across all samples
+2. For each sample: Calculate ratio of observed/geometric mean
+3. Size factor = median of all ratios
+
+**Formula:**
+$$s_j = \text{median}_i \left(\frac{K_{ij}}{\text{geometric mean}_k(K_{ik})}\right)$$
+
+**Advantages:**
+- Robust to highly expressed genes
+- Robust to genes with zero counts
+- Doesn't require RNA spike-ins
+- Doesn't assume total RNA is constant (invalid for DGE studies)
+
+**Result**: Normalized counts = Raw counts / Size factor
+
+### 4.4 Dispersion Estimation
+
+**Three-Step Process:**
+
+**Step 1: Per-Gene Dispersion**
+- Estimate α individually for each gene
+- Maximum likelihood estimation
+- Problem: Few replicates → high variance in estimates
+
+**Step 2: Trend Fitting**
+- Fit smooth curve relating mean expression to dispersion
+- Typically: Higher expressed genes have lower dispersion
+- Uses loess (locally weighted) regression
+
+**Step 3: Empirical Bayes Shrinkage**
+- Shrink per-gene estimates toward trend
+- Genes with unusual dispersion pulled toward expectation
+- Especially important for low-count genes
+- Amount of shrinkage proportional to deviation from trend
+
+**Result**: More stable dispersion estimates, especially for low-count genes
+
+### 4.5 Hypothesis Testing
+
+**Method**: Wald test on log2 fold change (LFC)
+
+**Test Statistic:**
+$$z = \frac{\hat{\beta}_{LFC}}{\text{SE}(\hat{\beta}_{LFC})}$$
+
+Where:
+- β̂_LFC = estimated log2 fold change
+- SE = standard error of estimate
+
+**Distribution**: Under H₀, z ~ normal(0,1)
+- Two-tailed test: P = 2 · P(Z > |z_obs|)
+
+**Multiple Testing Correction:**
+
+*Problem*: 4,000+ genes tested independently
+- Even with α = 0.05, expect ~200 false positives by chance
+- Standard solution insufficient
+
+*Solution*: Benjamini-Hochberg FDR Control
+- Adjusted p-value = BH correction
+- Interpretation: If p.adjust < 0.05, FDR ≤ 5%
+- On average, 5% of reported genes are false positives
+- Much less stringent than Bonferroni, but controls false discovery
+
+### 4.6 Effect Size: Log2 Fold Change
+
+**Definition:**
+$$\text{LFC} = \log_2\left(\frac{\text{Expression}_{\text{treatment}}}{\text{Expression}_{\text{control}}}\right)$$
+
+**Interpretation Examples:**
+
+| LFC Value | Fold Change | Biological Interpretation |
+|-----------|-------------|---------------------------|
+| 0 | 1.0× | No change |
+| 1 | 2.0× | Gene is 2-fold upregulated |
+| 2 | 4.0× | Gene is 4-fold upregulated |
+| -1 | 0.5× | Gene is 2-fold downregulated |
+| -2 | 0.25× | Gene is 4-fold downregulated |
+
+**LFC Shrinkage:**
+
+After GLM fitting, DESeq2 applies adaptive shrinkage to LFC estimates:
+
+*Problem*: 
+- Low-count genes have unreliable LFC estimates
+- Small sample sizes → wide confidence intervals
+- Can produce extreme LFCs for noise
+
+*Solution*: 
+- Use empirical Bayes shrinkage
+- Prior: distribution of observed LFC values
+- Shrink unusual estimates toward zero
+- Effect: More stable, interpretable results
+
+**Result**: Better ranking of genes by effect size
+
+---
+
+## PART III: R IMPLEMENTATION - LAB 09 DIFFERENTIAL EXPRESSION
+
+## 5. Complete R Code for DGE Analysis
+
+```{r libraries, eval=FALSE}
+# Install packages (run once)
+# install.packages("BiocManager")
+# BiocManager::install(c("DESeq2", "ggplot2", "tidyverse"))
+# install.packages("devtools")
+# devtools::install_github('kevinblighe/EnhancedVolcano')
+
+# Load libraries
+library(DESeq2)
+library(ggplot2)
+library(tidyverse)
+library(devtools)
+library(EnhancedVolcano)
+```
+
+### 5.1 Data Input and Preprocessing
+
+```{r data_input, eval=FALSE}
+# Set working directory
+setwd("YOUR_PATH_HERE")
+
+# Load raw counts with annotations
+annotatedRawCounts <- read_delim("Counts_raw.tsv")
+head(annotatedRawCounts)
+
+# Convert ID column to row names
+annotatedRawCounts <- annotatedRawCounts %>%
+  column_to_rownames(var = "ID")
+
+# Separate counts from annotations
+rawCounts <- annotatedRawCounts[, 3:14]        # Columns 3-14: count data (12 samples)
+annotations <- annotatedRawCounts[, 1:2]       # Columns 1-2: gene name and protein ID
+
+head(rawCounts)
+head(annotations)
+
+# Load sample metadata
+sampleData <- read_csv("SraRunTable.csv")
+head(sampleData)
+
+# Extract relevant columns and rename factors
+sampleData <- sampleData[, c("Run", "genotype", "treatment")]
+
+# Rename factor levels for clarity
+sampleData$genotype[sampleData$genotype == "wild type"] <- "WT"
+sampleData$genotype[sampleData$genotype == "tgt mutant"] <- "TGT"
+sampleData$treatment[sampleData$treatment == "2 mM nickel"] <- "Nickel"
+sampleData$treatment[sampleData$treatment == "none"] <- "none"
+
+# Save backup for outlier analysis
+sampleData_backup <- sampleData
+
+head(sampleData)
+```
+
+### 5.2 Quality Control: Examining Data Distribution
+
+```{r qc_dimensions, eval=FALSE}
+# Examine data dimensions
+cat("Total genes in raw count matrix:", nrow(rawCounts), "\n")
+cat("Total samples:", ncol(rawCounts), "\n")
+
+# Examine distribution of read counts
+cat("\nSummary statistics for raw counts:\n")
+summary(colSums(rawCounts))  # Library sizes
+
+# Plot library size distribution
+library_sizes <- colSums(rawCounts)
+qplot(x = names(library_sizes), y = library_sizes, 
+      geom = "col", main = "Library Sizes Across Samples",
+      xlab = "Sample", ylab = "Total Reads") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Check for zero-count genes
+zero_count_genes <- sum(rowSums(rawCounts) == 0)
+cat("\nGenes with zero reads across all samples:", zero_count_genes, "\n")
+
+# Examine count distribution (log scale)
+count_distribution <- tibble(
+  logCount = log10(rowSums(rawCounts) + 1),
+  gene = rownames(rawCounts)
+)
+
+ggplot(count_distribution, aes(x = logCount)) +
+  geom_histogram(bins = 50, fill = "steelblue", alpha = 0.7) +
+  labs(title = "Distribution of Log-Transformed Read Counts",
+       x = "log10(Total Count + 1)",
+       y = "Number of Genes") +
+  theme_minimal()
+```
+
+### 5.3 Pre-filtering: Improving Statistical Power
+
+```{r prefiltering, eval=FALSE}
+# QUESTION 1: What is the effect of pre-filtering on the count matrix?
+# ================================================================
+
+cat("BEFORE FILTERING:\n")
+cat("Genes in raw counts:", nrow(rawCounts), "\n")
+cat("Samples:", ncol(rawCounts), "\n")
+
+# Effect of filtering (summing reads across all samples)
+filtered_counts_test <- rawCounts[rowSums(rawCounts) > 10, ]
+
+cat("\nAFTER FILTERING (rowSum > 10):\n")
+cat("Genes remaining:", nrow(filtered_counts_test), "\n")
+cat("Genes removed:", nrow(rawCounts) - nrow(filtered_counts_test), "\n")
+cat("Proportion retained: ", 
+    round(nrow(filtered_counts_test)/nrow(rawCounts) * 100, 2), "%\n")
+
+# Visualization of filtering effect
+filtering_stats <- tibble(
+  category = c("Zero-count genes", "1-10 total reads", "11+ total reads"),
+  count = c(
+    sum(rowSums(rawCounts) == 0),
+    sum(rowSums(rawCounts) > 0 & rowSums(rawCounts) <= 10),
+    sum(rowSums(rawCounts) > 10)
+  )
+)
+
+ggplot(filtering_stats, aes(x = category, y = count, fill = category)) +
+  geom_col() +
+  geom_text(aes(label = count), vjust = -0.5) +
+  labs(title = "Effect of Pre-filtering Threshold",
+       x = "Gene Category",
+       y = "Number of Genes") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 30, hjust = 1))
+
+# ANSWER 1: 
+# Pre-filtering improves statistical power and computational efficiency by:
+# 1. Removing genes with insufficient counts for statistical detection
+# 2. Reducing the multiple testing burden (fewer genes → fewer tests → less stringent FDR correction)
+# 3. Accelerating DESeq2 computation
+# 4. Filtering threshold (>10 reads total) represents genes with ~3-4 reads/sample minimum
+#    This is above typical noise threshold for Poisson distribution
+
+# Apply filter permanently
+filteredCounts <- rawCounts[rowSums(rawCounts) > 10, ]
+```
+
+### 5.4 Experimental Design Matrix Setup
+
+```{r design_matrix, eval=FALSE}
+# QUESTION 2: Set up factor levels and reference conditions
+# ===========================================================
+
+cat("SAMPLE DATA BEFORE FACTORIZATION:\n")
+head(sampleData, 10)
+cat("\nUnique genotypes:", unique(sampleData$genotype), "\n")
+cat("Unique treatments:", unique(sampleData$treatment), "\n")
+
+# Convert to factors with meaningful order
+# Reference levels MUST be first (DESeq2 default)
+sampleData$genotype <- factor(sampleData$genotype, levels = c("WT", "TGT"))
+sampleData$treatment <- factor(sampleData$treatment, levels = c("none", "Nickel"))
+
+# Create combined group variable for easier contrast specification
+sampleData$group <- factor(paste0(sampleData$genotype, ".", sampleData$treatment))
+
+# Set reference level (baseline for all comparisons)
+# WT.none = wild-type in normal conditions (logical baseline)
+sampleData$group <- relevel(sampleData$group, ref = "WT.none")
+
+# Set row names to sample identifiers
+sampleData <- sampleData %>%
+  column_to_rownames("Run")
+
+cat("\nFACTOR LEVELS ESTABLISHED:\n")
+cat("Genotype levels:", levels(sampleData$genotype), "\n")
+cat("Treatment levels:", levels(sampleData$treatment), "\n")
+cat("Group levels:", levels(sampleData$group), "\n")
+
+# ANSWER 2:
+# Reference level design:
+# - WT (wild-type): Control genotype; first level in factor
+# - TGT (tgt knockout): Experimental genotype; compared relative to WT
+# - none: Control treatment; first level in factor  
+# - Nickel: Stress condition; compared relative to none
+# - WT.none = baseline condition (all comparisons measured relative to this)
+# 
+# Design matrix interpretation:
+# - LFC > 0: Gene more highly expressed RELATIVE TO WT.none
+# - LFC < 0: Gene less expressed RELATIVE TO WT.none
+# - This allows for intuitive interpretation: LFC tells us how condition changes expression
+
+# Verify sample order matches count matrix
+cat("\nVerification:\n")
+cat("Sample names in counts:", colnames(filteredCounts)[1:3], "...\n")
+cat("Sample names in metadata:", rownames(sampleData)[1:3], "...\n")
+cat("All samples in correct order?", 
+    all(colnames(filteredCounts) %in% rownames(sampleData)), "\n")
+
+# Reorder counts to match metadata exactly
+filteredCounts <- filteredCounts[, rownames(sampleData)]
+```
+
+### 5.5 DESeqDataSet Creation
+
+```{r deseqdataset, eval=FALSE}
+# Create DESeqDataSet object
+# This object stores: counts, metadata, design formula
+DESeq2Counts <- DESeqDataSetFromMatrix(
+  countData = filteredCounts,      # Raw count matrix
+  colData = sampleData,             # Sample metadata
+  design = ~ group                  # Design formula
+)
+
+cat("DESeqDataSet object created:\n")
+head(DESeq2Counts)
+cat("\nColumn metadata:\n")
+colData(DESeq2Counts)
+```
+
+### 5.6 Running DESeq2 Pipeline
+
+```{r deseq_pipeline, eval=FALSE}
+# Execute complete DESeq2 pipeline
+# This performs:
+# 1. Size factor estimation (normalization)
+# 2. Dispersion estimation (gene-wise and trend)
+# 3. Negative binomial GLM fitting
+# 4. Wald test for each gene
+
+DESeq2Data <- DESeq(DESeq2Counts)
+
+cat("DESeq2 pipeline complete.\n")
+cat("Available result names:\n")
+resultsNames(DESeq2Data)
+
+# Note on result names:
+# group_X_vs_Y means: compare group X relative to group Y (Y = reference)
+# LFC > 0: group X expression > group Y expression
+```
+
+### 5.7 Differential Expression Results - Treatment Effect
+
+```{r deseq_results_treatment, eval=FALSE}
+# QUESTION 3: Extract and interpret treatment effect results
+# ===========================================================
+
+# Extract results: Effect of Nickel on WT strain
+# Contrast: WT.Nickel vs. WT.none
+DESeq2Results_treatment <- results(
+  DESeq2Data,
+  contrast = c("group", "WT.Nickel", "WT.none"),
+  alpha = 0.05              # FDR threshold for significance
+)
+
+cat("TREATMENT EFFECT RESULTS (WT.Nickel vs WT.none):\n")
+summary(DESeq2Results_treatment)
+
+# ANSWER 3:
+# Summary interpretation:
+# - How many genes with padj < 0.05?
+# - How many upregulated vs. downregulated?
+# - What is the range of log2 fold changes?
+#
+# Typical expectations for nickel stress in WT:
+# - Upregulated: nickel-responsive genes (transporters, detoxification)
+# - Downregulated: genes conflicting with stress response
+# - LFC range: typically -5 to +5 in stress response studies
+
+# View detailed results
+head(DESeq2Results_treatment, 20)
+
+# Save results as table
+DESeq2ResultsDF <- as_tibble(DESeq2Results_treatment)
+DESeq2ResultsDF$ID <- rownames(DESeq2Results_treatment)
+
+# Write to file for Lab 10
+write_delim(DESeq2ResultsDF, file = "DESeq2Result_treatment.tsv")
+
+# Extract significantly DE genes
+res_up <- dplyr::filter(DESeq2ResultsDF, padj < 0.05 & log2FoldChange > 1)
+res_down <- dplyr::filter(DESeq2ResultsDF, padj < 0.05 & log2FoldChange < -1)
+
+cat("\nSignificantly upregulated genes (LFC > 1, padj < 0.05):", nrow(res_up), "\n")
+cat("Significantly downregulated genes (LFC < -1, padj < 0.05):", nrow(res_down), "\n")
+```
+
+### 5.8 Differential Expression Results - TGT Knockout Effect
+
+```{r deseq_results_tgt, eval=FALSE}
+# QUESTION 4: Compare TGT knockout to WT in normal conditions
+# ============================================================
+
+DESeq2Results_genotype <- results(
+  DESeq2Data,
+  contrast = c("group", "TGT.none", "WT.none"),
+  alpha = 0.05
+)
+
+cat("GENOTYPE EFFECT RESULTS (TGT.none vs WT.none):\n")
+summary(DESeq2Results_genotype)
+
+# ANSWER 4:
+# This comparison reveals the effect of Q deficiency (tgt knockout)
+# Expected findings from literature (Pollo-Oliveira et al., 2022):
+# - Upregulated: metal homeostasis genes (nikA, nikB, etc.)
+# - Upregulated: oxidative stress response genes
+# - Upregulated: iron-sulfur cluster assembly genes
+# - Downregulated: normal iron homeostasis genes
+
+# Extract gene-specific information
+cat("\nTop upregulated genes in TGT (Q-deficient):\n")
+tgt_up <- as_tibble(DESeq2Results_genotype) %>%
+  add_column(ID = rownames(DESeq2Results_genotype)) %>%
+  filter(padj < 0.05 & log2FoldChange > 1) %>%
+  arrange(desc(log2FoldChange)) %>%
+  slice(1:10)
+print(tgt_up)
+```
+
+### 5.9 Nickel Effect in TGT Mutant
+
+```{r deseq_results_tgt_nickel, eval=FALSE}
+# QUESTION 5: Compare nickel treatment in TGT knockout strain
+# ===========================================================
+
+DESeq2Results_tgt_treatment <- results(
+  DESeq2Data,
+  contrast = c("group", "TGT.Nickel", "TGT.none"),
+  alpha = 0.05
+)
+
+cat("TREATMENT EFFECT IN TGT MUTANT (TGT.Nickel vs TGT.none):\n")
+summary(DESeq2Results_tgt_treatment)
+
+# ANSWER 5:
+# This comparison shows how Q-deficient cells respond to nickel stress
+# Expected: Similar nickel-responsive genes as WT, but potentially different magnitude
+# Rationale: Already stressed baseline (Q-deficiency) may dampen further response
+```
+
+### 5.10 Quality Control: PCA Analysis
+
+```{r pca_analysis, eval=FALSE}
+# QUESTION 6: Assess sample quality and replicate clustering
+# ===========================================================
+
+# Transform data using rlog (regularized log transformation)
+# This stabilizes variance for visualization
+DESeq2Rld <- rlog(DESeq2Counts)
+
+# Perform PCA
+DESeq2PCA <- plotPCA(DESeq2Rld, intgroup = c("genotype", "treatment"))
+DESeq2PCA
+
+# Add sample labels
+DESeq2PCA_labeled <- DESeq2PCA + 
+  geom_text(aes(label = name), position = position_nudge(y = 1.5), size = 3)
+DESeq2PCA_labeled
+
+ggsave('PCAplot.png', width = 10, height = 7)
+
+# ANSWER 6:
+# PCA interpretation:
+# - PC1: Typically explains largest variance (often genotype effect)
+# - PC2: Secondary variance (often treatment effect)
+# - Replicates of same condition should cluster together
+# - If outlier present: Single sample distant from replicates
+# - This reveals data quality issues BEFORE downstream interpretation
+#
+# For queuosine study:
+# Expected: Clear separation between WT and TGT on PC1
+# Expected: Nickel vs. control separation visible (possibly on PC2)
+# Concern: If replicates don't cluster → investigate technical issues
+
+# Extract variance explained
+pca_data <- plotPCA(DESeq2Rld, intgroup = c("genotype", "treatment"), returnData = TRUE)
+percentVar <- attr(pca_data, "percentVar")
+cat("Variance explained by PC1:", round(percentVar[1], 1), "%\n")
+cat("Variance explained by PC2:", round(percentVar[2], 1), "%\n")
+```
+
+### 5.11 Individual Gene Examination
+
+```{r gene_counts, eval=FALSE}
+# QUESTION 7: Visualize specific genes of interest
+# ================================================
+
+# The tgt gene (queuosine biosynthesis)
+cat("Gene information for tgt:\n")
+annotations[annotations$gene == "tgt", ]
+
+# Extract and visualize tgt expression
+tgtCounts <- plotCounts(DESeq2Data, 
+                       gene = "b0406",  # tgt locus tag
+                       intgroup = c("genotype", "treatment"),
+                       returnData = TRUE)
+
+# Plot tgt expression
+tgt_plot <- ggplot(tgtCounts, aes(x = genotype, y = count, color = treatment)) +
+  geom_point(size = 3) +
+  facet_grid(~ treatment) +
+  labs(title = "tgt Gene Expression (Queuosine Biosynthesis)",
+       x = "Genotype",
+       y = "Normalized Count",
+       color = "Treatment") +
+  theme_minimal() +
+  theme(legend.position = "top")
+tgt_plot
+
+ggsave('tgt_counts.png', width = 10, height = 6)
+
+# ANSWER 7:
+# tgt interpretation:
+# - In WT.none: tgt expressed at baseline level
+# - In TGT.none: tgt NOT expressed (knockout = null transcripts)
+# - In WT.Nickel: tgt expression may change (Q biosynthesis under stress)
+# - In TGT.Nickel: tgt still absent (permanent knockout)
+# This validates the experimental design and confirms knockout efficiency
+
+# Examine other genes of interest
+metal_genes <- c("nikA", "nikB", "nikC", "fecA", "fecB", "sodA", "sodB")
+cat("\nExamining metal/stress response genes:\n")
+
+for (gene in metal_genes[1:3]) {
+  gene_info <- annotations[annotations$gene == gene, ]
+  if (nrow(gene_info) > 0) {
+    gene_id <- rownames(gene_info)
+    cat(gene, ":", gene_id, "\n")
+  }
+}
+```
+
+### 5.12 Outlier Detection and Removal
+
+```{r outlier_analysis, eval=FALSE}
+# QUESTION 8: Identify and assess impact of outliers
+# ==================================================
+
+# From MultiQC report, identify outlier sample
+# Typically: One sample clusters poorly in PCA
+# Example: SRR3192401 (replace with actual outlier from your data)
+
+# Method 1: Visual inspection from PCA
+# - Which sample plots far from replicates?
+# - Possible causes: contamination, mislabeling, technical failure
+
+# Method 2: Automated detection
+# Cook's distance (leverage and residuals)
+cooks_d <- assays(DESeq2Data)$cooks
+head(cooks_d)
+
+# Identify potential outlier
+# (This is provided by DESeq2 automatically during analysis)
+
+# Method 3: Check sample metadata
+cat("Sample metadata:\n")
+colData(DESeq2Counts)
+
+# If outlier identified (replace "SRR3192401" with actual sample):
+outlier_sample <- "SRR3192401"  # Example - replace with actual
+index <- which(rownames(colData(DESeq2Counts)) == outlier_sample)
+
+if (length(index) > 0) {
+  cat("\nFound outlier:", outlier_sample, "at index", index, "\n")
+  
+  # Remove outlier
+  DESeq2CountsNoOutlier <- DESeq2Counts[, -index]
+  
+  # Repeat analysis without outlier
+  DESeq2DataNoOutlier <- DESeq(DESeq2CountsNoOutlier)
+  
+  # Compare results
+  resultsNoOutlier <- results(DESeq2DataNoOutlier,
+                             contrast = c("group", "WT.Nickel", "WT.none"),
+                             alpha = 0.05)
+  
+  cat("\nComparison: WITH vs WITHOUT outlier\n")
+  summary(DESeq2Results_treatment)
+  cat("\n")
+  summary(resultsNoOutlier)
+  
+  # ANSWER 8:
+  # Outlier impact assessment:
+  # 1. Compare number of DE genes (significant genes should be similar)
+  # 2. Compare effect sizes (LFC should be similar for valid genes)
+  # 3. If major differences: outlier strongly influences results → should remove
+  # 4. If minor differences: outlier impact minimal → can retain
+  # 
+  # General principle: Keep data unless compelling reason to remove
+  # But extreme outliers can invalidate statistical assumptions
+}
+```
+
+---
+
+## PART IV: FUNCTIONAL PROFILING AND GENE ONTOLOGY - LAB 10
+
+## 6. Gene Ontology Enrichment Analysis
+
+### 6.1 Introduction to Gene Ontology
+
+```{r go_introduction, eval=FALSE}
+# Gene Ontology consists of three hierarchical structures:
+
+# 1. Biological Process (BP)
+#    Definition: Cellular or physiological objectives achieved by coordinated gene function
+#    Examples: "response to nickel stress", "metal ion homeostasis", "iron-sulfur cluster assembly"
+#    Scope: Pathways and high-level cellular responses
+
+# 2. Molecular Function (MF)
+#    Definition: Biochemical activities at molecular level
+#    Examples: "metal ion binding", "protein kinase activity", "transporter activity"
+#    Scope: Individual molecular activities
+
+# 3. Cellular Component (CC)
+#    Definition: Cellular structures and localizations
+#    Examples: "cytoplasm", "cell membrane", "iron-sulfur cluster"
+#    Scope: Where in the cell the function occurs
+
+# Structure: Directed Acyclic Graph (DAG)
+# - Not a simple tree
+# - Multiple inheritance: gene can be annotated to multiple parent terms
+# - Transitivity: genes annotated to a term are implicitly annotated to all ancestors
+
+cat("Gene Ontology Structure Explained:\n")
+cat("=====================================\n")
+cat("If gene X is annotated to 'iron transport':\n")
+cat("- It is implicitly annotated to 'metal ion transport' (parent)\n")
+cat("- It is implicitly annotated to 'transport' (grandparent)\n")
+cat("- It is implicitly annotated to 'biological process' (root)\n")
+cat("\nThis hierarchy allows analyses at different levels of specificity.\n")
+```
+
+### 6.2 Setting Up OrgDb Database
+
+```{r orgdb_setup, eval=FALSE}
+# QUESTION 9: Identify and load the correct OrgDb package
+# ========================================================
+
+# Install if needed (run once)
+# BiocManager::install("org.Ec.K12.eg.db")
+
+# Load the E. coli K-12 organism database
+library(org.Ec.K12.eg.db)
+
+# Explore available gene identifiers
+available_keytypes <- keytypes(org.Ec.K12.eg.db)
+cat("Available key types in OrgDb:\n")
+print(available_keytypes)
+
+# ANSWER 9:
+# Available keytypes for E. coli K-12:
+# - ACCNUM: Protein accession numbers (NP_414954.1)
+# - GENES: Entrez gene IDs  (used internally)
+# - GENENAME: Gene names (tgt, nikA, sodA, etc.) ← Most useful for this analysis
+# - LOCUS_TAG: NCBI locus tags (b0406, b2103, etc.)
+# - REFSEQ: RefSeq accession numbers
+# - SYMBOL: Gene symbols
+
+# Examine our gene names
+cat("\nGene names in our data:\n")
+cat(head(annotations$gene, 10), "\n")
+
+# Check which keytype matches our data best
+keys_genename <- keys(org.Ec.K12.eg.db, keytype = "GENENAME")
+mapping_rate_genename <- sum(annotations$gene %in% keys_genename) / nrow(annotations) * 100
+cat("\nMapping rate with GENENAME:", round(mapping_rate_genename, 1), "%\n")
+
+# Try LOCUS_TAG as alternative
+keys_locus <- keys(org.Ec.K12.eg.db, keytype = "LOCUS_TAG")
+mapping_rate_locus <- sum(annotations$gene %in% keys_locus) / nrow(annotations) * 100
+cat("Mapping rate with LOCUS_TAG:", round(mapping_rate_locus, 1), "%\n")
+
+# Result for this study:
+# LOCUS_TAG provides better coverage than GENENAME
+# But GENENAME is still acceptable (>90% mapping)
+# We proceed with the better option
+
+# Select the better keytype
+SELECTED_KEYTYPE <- "LOCUS_TAG"  # or "GENENAME" depending on coverage
+cat("\nSelected keytype for analysis:", SELECTED_KEYTYPE, "\n")
+```
+
+### 6.3 Defining Gene Sets for Enrichment Analysis
+
+```{r gene_set_definition, eval=FALSE}
+# QUESTION 10: Define gene sets for ORA
+# ======================================
+
+# Load results from Lab 09
+DESeq2ResultsDF <- read_delim("DESeq2Result_treatment.tsv")
+
+# Define DE gene sets using standard cutoffs
+# Cutoff rationale:
+# - |LFC| > 1: Represents ~2-fold change (practical biological significance)
+# - padj < 0.05: FDR controlled at 5% (standard statistical threshold)
+
+# Upregulated genes
+res_up <- dplyr::filter(DESeq2ResultsDF, 
+                       padj < 0.05 & log2FoldChange > 1)
+genes_up_id <- res_up$ID
+genes_up <- annotations[genes_up_id, "gene"][[1]]  # Extract as vector
+
+# Downregulated genes
+res_down <- dplyr::filter(DESeq2ResultsDF,
+                         padj < 0.05 & log2FoldChange < -1)
+genes_down_id <- res_down$ID
+genes_down <- annotations[genes_down_id, "gene"][[1]]
+
+# Combined DE genes (both up and down)
+genes_de <- c(genes_up, genes_down)
+
+# ANSWER 10:
+cat("Gene Set Definition Summary:\n")
+cat("==============================\n")
+cat("Total upregulated genes (LFC > 1, padj < 0.05):", length(genes_up), "\n")
+cat("Total downregulated genes (LFC < -1, padj < 0.05):", length(genes_down), "\n")
+cat("Total DE genes:", length(genes_de), "\n")
+cat("\nSamples of genes in each set:\n")
+cat("Upregulated (first 5):", head(genes_up, 5), "\n")
+cat("Downregulated (first 5):", head(genes_down, 5), "\n")
+
+# Check mapping to OrgDb
+mapped_up <- sum(genes_up %in% keys(org.Ec.K12.eg.db, keytype = SELECTED_KEYTYPE))
+mapped_down <- sum(genes_down %in% keys(org.Ec.K12.eg.db, keytype = SELECTED_KEYTYPE))
+mapped_de <- sum(genes_de %in% keys(org.Ec.K12.eg.db, keytype = SELECTED_KEYTYPE))
+
+cat("\nMapping to OrgDb:\n")
+cat("Upregulated mapped:", mapped_up, "/", length(genes_up), 
+    "=", round(mapped_up/length(genes_up)*100, 1), "%\n")
+cat("Downregulated mapped:", mapped_down, "/", length(genes_down),
+    "=", round(mapped_down/length(genes_down)*100, 1), "%\n")
+cat("All DE mapped:", mapped_de, "/", length(genes_de),
+    "=", round(mapped_de/length(genes_de)*100, 1), "%\n")
+```
+
+### 6.4 Over-Representation Analysis (ORA)
+
+```{r ora_analysis, eval=FALSE}
+# QUESTION 11: Perform GO enrichment analysis
+# ============================================
+
+library(clusterProfiler)
+
+# ORA for all DE genes - Biological Process
+orBP <- enrichGO(gene = genes_de,
+                OrgDb = org.Ec.K12.eg.db,
+                ont = "BP",                    # Biological Process
+                keyType = SELECTED_KEYTYPE,
+                pvalueCutoff = 0.05,
+                pAdjustMethod = "BH",
+                qvalueCutoff = 0.05)
+
+# ORA for upregulated genes
+orUpBP <- enrichGO(gene = genes_up,
+                  OrgDb = org.Ec.K12.eg.db,
+                  ont = "BP",
+                  keyType = SELECTED_KEYTYPE,
+                  pvalueCutoff = 0.05)
+
+# ORA for downregulated genes
+orDownBP <- enrichGO(gene = genes_down,
+                    OrgDb = org.Ec.K12.eg.db,
+                    ont = "BP",
+                    keyType = SELECTED_KEYTYPE,
+                    pvalueCutoff = 0.05)
+
+# ANSWER 11:
+cat("ORA Results Summary:\n")
+cat("====================\n")
+cat("All DE genes - Biological Process:\n")
+print(summary(orBP))
+
+cat("\nUpregulated genes - Biological Process:\n")
+print(summary(orUpBP))
+
+cat("\nDownregulated genes - Biological Process:\n")
+print(summary(orDownBP))
+
+# Examine results
+head(orBP, 10)
+head(orUpBP, 10)
+head(orDownBP, 10)
+```
+
+### 6.5 Volcano Plot Visualization
+
+```{r volcano_plot, eval=FALSE}
+# QUESTION 12: Visualize differential expression
+# ===============================================
+
+# Prepare data for visualization
+DESeq2ResultsDF$significant <- ifelse(!is.na(DESeq2ResultsDF$padj) & 
+                                       DESeq2ResultsDF$padj < 0.05,
+                                      TRUE, FALSE)
+DESeq2ResultsDF$gene <- annotations[DESeq2ResultsDF$ID, "gene"][[1]]
+
+# Create volcano plot
+volcano <- EnhancedVolcano(DESeq2ResultsDF,
+                          lab = DESeq2ResultsDF$gene,
+                          x = 'log2FoldChange',
+                          y = 'padj',
+                          title = 'Nickel Treatment Effect on WT E. coli',
+                          pCutoff = 0.05,
+                          FCcutoff = 1.0,
+                          pointSize = 2,
+                          colAlpha = 0.5)
+volcano
+
+ggsave('volcano_plot.png', width = 12, height = 8)
+
+# ANSWER 12:
+cat("Volcano Plot Interpretation:\n")
+cat("============================\n")
+cat("X-axis (log2FoldChange): Effect size\n")
+cat("  Negative: Downregulated under nickel stress\n")
+cat("  Positive: Upregulated under nickel stress\n")
+cat("\nY-axis (-log10 padj): Statistical significance\n")
+cat("  Higher: More significant (padj closer to 0)\n")
+cat("  Below threshold line: Not significant (padj >= 0.05)\n")
+cat("\nShape interpretation (volcano shape):\n")
+cat("  - Wide base: Few genes with dramatic changes\n")
+cat("  - Many significant genes with modest LFC: suggests stress response\n")
+cat("  - Symmetric: unbiased effect (not all up or all down)\n")
+
+# Identify genes of interest
+cat("\nTop upregulated genes (nickel stress):\n")
+top_up <- DESeq2ResultsDF %>%
+  filter(significant & log2FoldChange > 0) %>%
+  arrange(desc(log2FoldChange)) %>%
+  slice(1:5)
+print(top_up[, c("gene", "log2FoldChange", "padj")])
+
+cat("\nTop downregulated genes (nickel stress):\n")
+top_down <- DESeq2ResultsDF %>%
+  filter(significant & log2FoldChange < 0) %>%
+  arrange(log2FoldChange) %>%
+  slice(1:5)
+print(top_down[, c("gene", "log2FoldChange", "padj")])
+```
+
+### 6.6 Dotplot Visualization
+
+```{r dotplot, eval=FALSE}
+# QUESTION 13: Visualize GO term enrichment
+# ==========================================
+
+library(ggplot2)
+
+# Dotplot: All DE genes
+dotplot(orBP, showCategory = 15, title = "GO Enrichment: All DE Genes")
+ggsave('dotplot_allDE.png', width = 12, height = 8)
+
+# Dotplot: Upregulated genes
+dotplot(orUpBP, showCategory = 15, title = "GO Enrichment: Upregulated Genes")
+ggsave('dotplot_upregulated.png', width = 12, height = 8)
+
+# Dotplot: Downregulated genes
+if (nrow(orDownBP) > 0) {
+  dotplot(orDownBP, showCategory = 15, title = "GO Enrichment: Downregulated Genes")
+  ggsave('dotplot_downregulated.png', width = 12, height = 8)
+} else {
+  cat("No significantly enriched GO terms for downregulated genes.\n")
+}
+
+# ANSWER 13:
+cat("Dotplot Interpretation:\n")
+cat("=======================\n")
+cat("X-axis (GeneRatio): Proportion of DE genes in each GO term\n")
+cat("  Calculation: (# DE genes in term) / (total # DE genes)\n")
+cat("  Example: 5/50 = 0.1 (10% of DE genes in this term)\n")
+cat("\nY-axis: GO term names (sorted by significance or ratio)\n")
+cat("\nPoint size: Count (number of DE genes in term)\n")
+cat("  Larger points: More genes involved in this process\n")
+cat("  Smaller points: Few genes (less robust)\n")
+cat("\nPoint color: p.adjust value (statistical significance)\n")
+cat("  Red: Highly significant (p.adjust << 0.05)\n")
+cat("  Gray: Less significant (approaching 0.05)\n")
+cat("\nBiological interpretation for nickel stress:\n")
+cat("- Expected enrichment: metal response genes, transporters\n")
+cat("- Expected enrichment: oxidative stress response\n")
+cat("- Expected enrichment: detoxification pathways\n")
+
+# Detailed examination of top enriched terms
+cat("\nTop 5 enriched GO terms (all DE genes):\n")
+top_terms <- head(as_tibble(orBP), 5)
+print(top_terms[, c("ID", "Description", "Count", "p.adjust")])
+```
+
+### 6.7 Enrichment Map (Term Similarity)
+
+```{r emapplot, eval=FALSE}
+# QUESTION 14: Identify related GO terms using semantic similarity
+# ===============================================================
+
+library(enrichplot)
+
+# Add similarity information (required for emapplot)
+enrichedBP <- pairwise_termsim(orUpBP)
+
+# Examine similarity matrix
+head(enrichedBP@termsim)
+
+# Enrichment map: connected nodes = related terms
+emapplot(enrichedBP, showCategory = 20, layout = "kk")
+ggsave('emapplot_upregulated.png', width = 14, height = 10)
+
+# For all DE genes (if enough terms)
+if (nrow(orBP) > 5) {
+  enrichedBP_all <- pairwise_termsim(orBP)
+  emapplot(enrichedBP_all, showCategory = 20, layout = "kk")
+  ggsave('emapplot_allDE.png', width = 14, height = 10)
+}
+
+# ANSWER 14:
+cat("Enrichment Map Interpretation:\n")
+cat("===============================\n")
+cat("Nodes: Individual GO terms\n")
+cat("Node size: Count (# of genes)\n")
+cat("Node color: p.adjust (red = significant, gray = less significant)\n")
+cat("\nEdges: Connections between related terms\n")
+cat("Edge thickness: Similarity strength\n")
+cat("  Thick lines: Highly related terms (large gene overlap)\n")
+cat("  Thin lines: Weakly related terms (small overlap)\n")
+cat("\nClusters: Groups of functionally related terms\n")
+cat("  Cluster interpretation: Multiple aspects of one biological process\n")
+cat("  Example cluster: 'iron transport', 'metal ion transport', 'transport'\n")
+cat("    → These related terms together support a robust interpretation\n")
+cat("\nBiological interpretation:\n")
+cat("- Clustered terms are more robust than isolated terms\n")
+cat("- Related clusters suggest interconnected cellular processes\n")
+cat("- For nickel stress: clusters might include:\n")
+cat("  1. Metal ion transport and homeostasis\n")
+cat("  2. Oxidative stress and antioxidant defense\n")
+cat("  3. Detoxification and stress response\n")
+```
+
+---
+
+## PART V: COMPREHENSIVE BIOLOGICAL INTERPRETATION
+
+## 7. Integrative Analysis: DGE + Functional Profiling
+
+### 7.1 Expected Findings for Queuosine Study
+
+```{r expected_findings, eval=FALSE}
+cat("EXPECTED BIOLOGICAL FINDINGS\n")
+cat("============================\n\n")
+
+cat("1. NICKEL STRESS RESPONSE (WT.Nickel vs WT.none):\n")
+cat("-" %+% "---" %+% "---" %+% "-\n")
+cat("Expected upregulated genes:\n")
+cat("- nikA, nikB, nikC (nickel transporter components)\n")
+cat("- nik operon (nickel transport and regulation)\n")
+cat("- nreA, nreB (nickel-responsive regulatory genes)\n")
+cat("- sodA, sodB (superoxide dismutase - ROS defense)\n")
+cat("- katG (catalase - H2O2 defense)\n")
+cat("- trx (thioredoxin - reducing environment)\n")
+cat("- gsh genes (glutathione synthesis)\n")
+cat("- hpf (hydrogen peroxide-forming NADH oxidase)\n")
+cat("\nEnriched GO terms (expected):\n")
+cat("BP: 'response to heavy metal stress'\n")
+cat("BP: 'response to oxidative stress'\n")
+cat("BP: 'metal ion transport'\n")
+cat("BP: 'metal ion homeostasis'\n")
+cat("MF: 'metal ion binding'\n")
+cat("CC: 'cell membrane'\n")
+
+cat("\n2. QUEUOSINE DEFICIENCY EFFECT (TGT.none vs WT.none):\n")
+cat("-" %+% "---" %+% "---" %+% "-\n")
+cat("Expected upregulated genes:\n")
+cat("- nikA, nikB, nikC (constitutively elevated in Q-deficiency)\n")
+cat("- fecA, fecB (iron transport - expanded metal homeostasis)\n")
+cat("- iscS, iscU, iscA (Fe-S cluster assembly)\n")
+cat("- sodA, sodB (basal ROS defense)\n")
+cat("- groEL, groES (stress chaperones)\n")
+cat("- trx, grx (reducing environment maintenance)\n")
+cat("- rplX, rpmA (specific ribosomal proteins)\n")
+cat("\nExpected downregulated genes:\n")
+cat("- Normal iron homeostasis genes (FUR-regulated)\n")
+cat("- Some translation elongation factors\n")
+cat("- Genes sensitive to wobble-pair changes\n")
+cat("\nEnriched GO terms (expected):\n")
+cat("BP: 'metal ion homeostasis' (constitutive imbalance)\n")
+cat("BP: 'oxidative stress response' (elevated baseline)\n")
+cat("BP: 'iron-sulfur cluster assembly' (compensatory)\n")
+cat("BP: 'chaperone-mediated protein folding' (stress)\n")
+cat("BP: 'response to stimulus' (heightened sensitivity)\n")
+
+cat("\n3. NICKEL IN Q-DEFICIENT BACKGROUND (TGT.Nickel vs TGT.none):\n")
+cat("-" %+% "---" %+% "---" %+% "-\n")
+cat("Expected patterns:\n")
+cat("- Similar directional response as WT + Nickel\n")
+cat("- Possibly SMALLER magnitude of response\n")
+cat("  (Rationale: already-stressed baseline less room for further adaptation)\n")
+cat("- OR possible unique genes responding only in Q-deficient state\n")
+cat("  (Rationale: additional stress from translation defects)\n")
+cat("\nExamples of Q-effect genes:\n")
+cat("- betT (betaine transport - osmoprotection)\n")
+cat("- putative Q-sensitive translation targets\n")
+cat("- tRNA modification genes (interplay with Q)\n")
+```
+
+### 7.2 Biological Validation Framework
+
+```{r validation_framework, eval=FALSE}
+cat("BIOLOGICAL VALIDATION CHECKLIST\n")
+cat("================================\n\n")
+
+cat("1. Literature Cross-Reference:\n")
+cat("   [] Are upregulated genes known to respond to metal stress?\n")
+cat("   [] Are downregulated genes incompatible with stress response?\n")
+cat("   [] Do findings align with original paper (Pollo-Oliveira et al., 2022)?\n")
+cat("   [] Are known metal transporters in the DE gene list?\n\n")
+
+cat("2. Functional Consistency:\n")
+cat("   [] Do GO terms make biological sense for the condition?\n")
+cat("   [] Are related GO terms clustered together (emapplot)?\n")
+cat("   [] Do enriched terms form a coherent biological story?\n")
+cat("   [] Are contradictory processes absent (e.g., growth + death)?\n\n")
+
+cat("3. Gene Expression Magnitude:\n")
+cat("   [] Are stress response genes upregulated (not downregulated)?\n")
+cat("   [] Are LFC values reasonable (typically -3 to +3 for stress)?\n")
+cat("   [] Do housekeeping genes show minimal change?\n")
+cat("   [] Are changes consistent across replicates (low variance)?\n\n")
+
+cat("4. Statistical Rigor:\n")
+cat("   [] Are p-values appropriate (p.adjust < 0.05)?\n")
+cat("   [] Are LFC estimates stable (low standard error)?\n")
+cat("   [] Do sample replicates cluster properly (PCA)?\n")
+cat("   [] Were outliers identified and handled appropriately?\n\n")
+
+cat("5. Quantitative Thresholds:\n")
+cat("   [] Do results depend on cutoff choices (LFC, p-value)?\n")
+cat("   [] Is the same result obtained with alternative thresholds?\n")
+cat("   [] Are the number of DE genes reasonable (5-30% typical)?\n")
+cat("   [] Is the balance reasonable (up vs. down genes)?\n\n")
+
+cat("6. Prior Knowledge Integration:\n")
+cat("   [] Do known metal homeostasis genes appear as expected?\n")
+cat("   [] Is tgt gene visible in genotype comparison (TGT.none vs WT.none)?\n")
+cat("   [] Are known Q-responsive genes enriched?\n")
+cat("   [] Do results match predicted nickel response genes?\n")
+```
+
+### 7.3 Example Interpretations
+
+```{r example_interpretations, eval=FALSE}
+cat("EXAMPLE GENE INTERPRETATION\n")
+cat("============================\n\n")
+
+# Example 1: nikB (nickel transporter)
+cat("Example 1: nikB Gene\n")
+cat("Expected findings if present in DE list:\n")
+cat("- WT.Nickel vs WT.none: LFC = +2.5, padj = 0.001\n")
+cat("  Interpretation: Nickel INDUCES nickel transporter expression\n")
+cat("  Biological mechanism: Needed to handle excess nickel\n\n")
+
+cat("- TGT.none vs WT.none: LFC = +1.8, padj = 0.01\n")
+cat("  Interpretation: Q-deficiency alone INCREASES nikB expression\n")
+cat("  Biological mechanism: Q-deficiency creates metal imbalance\n")
+cat("                       Cell compensates by inducing transporters\n\n")
+
+cat("- TGT.Nickel vs TGT.none: LFC = +1.2, padj = 0.02\n")
+cat("  Interpretation: Additional nickel ADDS to Q-deficiency effect\n")
+cat("  Biological mechanism: Combined stresses → additive response\n\n")
+
+# Example 2: fecA (iron transporter)
+cat("Example 2: fecA Gene (Iron Transport)\n")
+cat("Expected findings:\n")
+cat("- WT.Nickel vs WT.none: LFC = +0.3, padj = 0.45\n")
+cat("  Interpretation: Nickel stress does NOT strongly affect iron transport\n")
+cat("  Biological mechanism: Separate stress responses\n\n")
+
+cat("- TGT.none vs WT.none: LFC = +1.2, padj = 0.001\n")
+cat("  Interpretation: Q-deficiency alters iron metabolism\n")
+cat("  Biological mechanism: Q regulates Fe-S cluster protein translation\n")
+cat("                       Q-deficiency disrupts Fe-S biosynthesis\n")
+cat("                       Cell responds by increasing iron import\n\n")
+
+# Example 3: groEL (chaperone)
+cat("Example 3: groEL Gene (Heat Shock Chaperone)\n")
+cat("Expected findings:\n")
+cat("- WT.Nickel vs WT.none: LFC = +0.6, padj = 0.02\n")
+cat("  Interpretation: Metal stress triggers protein misfolding\n")
+cat("  Biological mechanism: Nickel can interfere with protein folding\n")
+cat("                       Cell increases chaperone production\n\n")
+
+cat("- TGT.none vs WT.none: LFC = +0.8, padj = 0.001\n")
+cat("  Interpretation: Q-deficiency causes translation defects\n")
+cat("  Biological mechanism: Wobble-pair defects → some misfolded proteins\n")
+cat("                       Cell compensates with higher chaperone levels\n")
+```
+
+---
+
+## PART VI: SUMMARY AND KEY CONCLUSIONS
+
+## 8. Key Learning Outcomes
+
+```{r conclusions, eval=FALSE}
+cat("KEY LEARNING OUTCOMES\n")
+cat("====================\n\n")
+
+cat("TECHNICAL SKILLS:\n")
+cat("✓ Processed raw RNA-seq data through complete analysis pipeline\n")
+cat("✓ Implemented DESeq2 for statistical testing of differential expression\n")
+cat("✓ Performed quality control at multiple stages (QC, PCA, outliers)\n")
+cat("✓ Executed Gene Ontology enrichment analysis\n")
+cat("✓ Generated publication-quality visualizations\n")
+cat("✓ Interpreted statistical results in biological context\n\n")
+
+cat("BIOLOGICAL UNDERSTANDING:\n")
+cat("✓ Understood queuosine's role in translation and metal homeostasis\n")
+cat("✓ Recognized how metal stress triggers transcriptional changes\n")
+cat("✓ Appreciated Q-deficiency as model of tRNA modification defects\n")
+cat("✓ Integrated multiple levels of analysis (statistics, function, literature)\n")
+cat("✓ Developed ability to design experiments testing specific hypotheses\n\n")
+
+cat("CRITICAL THINKING:\n")
+cat("✓ Evaluated whether statistical results make biological sense\n")
+cat("✓ Identified potential confounds and artifacts\n")
+cat("✓ Applied appropriate cutoffs based on effect size and significance\n")
+cat("✓ Validated findings against known biological mechanisms\n")
+cat("✓ Recognized limitations of gene-level analysis (protein level not assessed)\n\n")
+
+cat("FUTURE DIRECTIONS:\n")
+cat("→ Validate findings with qRT-PCR on selected genes\n")
+cat("→ Measure protein levels (proteomics) for key genes\n")
+cat("→ Perform phenotypic studies (growth curves, stress tolerance)\n")
+cat("→ Investigate molecular mechanisms (Q biosynthesis regulation)\n")
+cat("→ Extend to other stress conditions and genetic backgrounds\n")
+```
+
+---
+
+## References and Further Reading
+
+```{r references, eval=FALSE}
+cat("KEY REFERENCES\n")
+cat("===============\n\n")
+
+cat("Original Queuosine Study:\n")
+cat("Pollo-Oliveira, L., Jordan, M.R., Soares, P.M., et al. (2022)\n")
+cat("'The absence of the queuosine tRNA modification leads to pleiotropic phenotypes\n")
+cat("revealing perturbations of metal and oxidative stress homeostasis'\n")
+cat("Metallomics, 14(9): mfac065\n")
+cat("DOI: 10.1093/metallomics/mfac065\n\n")
+
+cat("DESeq2 Method Paper:\n")
+cat("Love, M.I., Huber, W., Anders, S. (2014)\n")
+cat("'Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2'\n")
+cat("Genome Biology, 15: 550\n")
+cat("DOI: 10.1186/s13059-014-0550-8\n\n")
+
+cat("Gene Ontology Enrichment Reviews:\n")
+cat("Khatri, P., Sirota, M., Butte, A.J. (2012)\n")
+cat("'Ten Years of Pathway Analysis: Current Approaches and Outstanding Challenges'\n")
+cat("PLoS Computational Biology, 8(2): e1002375\n")
+cat("DOI: 10.1371/journal.pcbi.1002375\n\n")
+
+cat("clusterProfiler Package:\n")
+cat("Wu, T., Hu, E., Xu, S., et al. (2021)\n")
+cat("'clusterProfiler 4.0: A universal enrichment tool for interpreting omics data'\n")
+cat("The Innovation, 2(3): 100141\n")
+cat("DOI: 10.1016/j.xinn.2021.100141\n\n")
+
+cat("RNA-seq Comprehensive Guide:\n")
+cat("Griffith, M., Walker, J.R., Spies, N.C., et al. (2015)\n")
+cat("'Informatics for RNA Sequencing: A Web Resource for Analysis on the Cloud'\n")
+cat("PLoS Computational Biology, 11(8): e1004393\n")
+cat("DOI: 10.1371/journal.pcbi.1004393\n\n")
+
+cat("Online Resources:\n")
+cat("• BioConductor: https://www.bioconductor.org/\n")
+cat("• Gene Ontology: http://geneontology.org/\n")
+cat("• KEGG: https://www.kegg.jp/\n")
+cat("• NCBI GEO: https://www.ncbi.nlm.nih.gov/geo/\n")
+cat("• EBI ENA: https://www.ebi.ac.uk/ena/\n")
+```
+
+---
+
+## Appendix: Troubleshooting Common Issues
+
+```{r troubleshooting, eval=FALSE}
+cat("TROUBLESHOOTING GUIDE\n")
+cat("====================\n\n")
+
+cat("ISSUE 1: Low mapping percentage\n")
+cat("Problem: <80% of reads map to reference genome\n")
+cat("Possible causes:\n")
+cat("  - Contamination from other organisms\n")
+cat("  - Low quality reads (check FastQC)\n")
+cat("  - Wrong reference genome\n")
+cat("Solutions:\n")
+cat("  - Check MultiQC for per-sample quality\n")
+cat("  - Verify reference organism (are we using E. coli K-12?)\n")
+cat("  - Consider quality filtering of raw reads\n")
+cat("  - Check for contaminating species in BLAST\n\n")
+
+cat("ISSUE 2: Few DE genes identified\n")
+cat("Problem: Very small number of significantly DE genes (<10)\n")
+cat("Possible causes:\n")
+cat("  - Biological effect is subtle\n")
+cat("  - High biological variance between replicates\n")
+cat("  - Inappropriate statistical cutoffs\n")
+cat("Solutions:\n")
+cat("  - Relax thresholds (e.g., LFC > 0.5 instead of > 1)\n")
+cat("  - Check PCA for batch effects or outliers\n")
+cat("  - Inspect replicate similarity\n")
+cat("  - Verify experimental design (are conditions actually different?)\n\n")
+
+cat("ISSUE 3: No enriched GO terms\n")
+cat("Problem: enrichGO returns empty results\n")
+cat("Possible causes:\n")
+cat("  - Wrong keytype for gene identifiers\n")
+cat("  - Genes not mapping to organism database\n")
+cat("  - DE gene set too small (need minimum 5-10 genes)\n")
+cat("  - All genes in universal background (all genes affected equally)\n")
+cat("Solutions:\n")
+cat("  - Verify keytype: GENENAME vs LOCUS_TAG\n")
+cat("  - Check mapping rate (should be >70%)\n")
+cat("  - Relax filtering cutoffs to increase gene set size\n")
+cat("  - Verify organism database is correct (org.Ec.K12.eg.db)\n\n")
+
+cat("ISSUE 4: Outlier sample identified\n")
+cat("Problem: One sample clusters far from replicates in PCA\n")
+cat("Possible causes:\n")
+cat("  - Contamination\n")
+cat("  - Technical failure during library prep or sequencing\n")
+cat("  - Sample mislabeling\n")
+cat("  - Biological difference from expected condition\n")
+cat("Solutions:\n")
+cat("  - Investigate sample metadata (when prepared, by whom?)\n")
+cat("  - Check FastQC for quality issues\n")
+cat("  - Check alignment quality\n")
+cat("  - Remove outlier and repeat analysis\n")
+cat("  - Report findings with and without outlier\n\n")
+
+cat("ISSUE 5: Volcano plot shows non-volcano shape\n")
+cat("Problem: Unexpected distribution of points\n")
+cat("Possible patterns:\n")
+cat("  - Skewed distribution: suggests batch effects\n")
+cat("  - All significant genes in one direction: suggests systematic bias\n")
+cat("  - Flat distribution: suggests insufficient power\n")
+cat("Solutions:\n")
+cat("  - Check PCA for technical effects\n")
+cat("  - Verify normalization was applied (DESeq pipeline)\n")
+cat("  - Check for contamination\n")
+cat("  - Ensure correct contrast was specified\n")
+```
+
+---
+
+**END OF DOCUMENT**
+
+This R Markdown file contains:
+1. **Complete theoretical background** covering all concepts from the slides
+2. **Full R code** for both Lab 09 (DGE) and Lab 10 (Functional Profiling)
+3. **Detailed answers** to all questions in the HTML documents
+4. **Biological interpretation** specific to the queuosine study
+5. **Troubleshooting guide** for common bioinformatics challenges
+6. **References** to key publications
+
+To use this file:
+1. Save as `.Rmd` file
+2. Replace file paths with actual paths
+3. Run sections sequentially or knit entire document
+4. Customize gene names based on your analysis results

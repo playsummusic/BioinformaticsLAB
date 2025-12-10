@@ -430,6 +430,10 @@ Since we use the newest version of Python (3.14), which is not compatible with C
 ##PyMol
 After running the structure prediction and downloading the PDB files, they were fetched into PyMol and edited. The finished graph is shown below and also the code that lead to the code:
 
+```{r, eval=FALSE, fig.cap=ColabFold structural predictions for two sequences from accession number: XP_001703004.1. Structures are aligned and all cysteine residues are shown in}
+knitr::include_graphics()
+```
+
 
 
 \newpage

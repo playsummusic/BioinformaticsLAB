@@ -274,7 +274,7 @@ add.scale.bar()
 
 
 ```{r, echo=FALSE, out.width="85%", fig.cap='Maximum Likelihood phylogenetic tree of FAP sequences estimated under the WAG+G(4)+I model. Bootstrap values (>70%) are displayed at internal nodes.'}
-knitr::include_graphics("C:/Users/cemin/Documents/Molbio/Master/bioinformatics/Mol923/mol923/R_markdown/ML_Tree_FAP_sequences_formated.png")
+knitr::include_graphics("Tree.jpeg")
 ```
 
 \newpage

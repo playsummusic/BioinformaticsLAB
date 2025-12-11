@@ -36,6 +36,7 @@ knitr::write_bib(c("DESeq2", "ggplot2", "tidyverse",
                    "knitr", "rmarkdown"), file = 'packages.bib')
 ```
 
+\newpage
 # Introduction
 
 # Raw Reads and Mapping QC
@@ -90,7 +91,7 @@ knitr::include_graphics("htseq_assignment_plot_percentages.png")
 
 a)  Which columns define the used base strain and substrain (WT or TGT mutant), respectively? Can you spot an error in one of those columns?
 
-**Answer:** The genotype column shows if the wild type or tgt mutant was used. The strain column shows wich *E.coli* strain was used. The error is in the strain column suggesting that for every experiment a different strain was used. But comparing this with the strains and method supsection of the methods section of the paper shows that only "Escherichia coli K-12 MG1655 was used as the WT strain.".[@pollo-oliveira2022]
+**Answer:** The genotype column shows if the wild type or tgt mutant was used. The strain column shows wich *E.coli* strain was used. The error is in the strain column suggesting that for every experiment a different strain was used. But comparing this with the strains and method supsection of the methods section of the paper shows that only "Escherichia coli K-12 MG1655 was used as the WT strain.".[@pollo2022absence]
 
 b)  Which column defines if nickel was added to the media?
 
@@ -282,33 +283,33 @@ tgt + Nickel: The tgt knock out stais the same but now Nickel is added. This sho
 
 
 # Part 2: Functional Analysis and Vizualisation
-# Setup
+## Setup
 
 ```{r, eval=FALSE}
-# if you work on your own PC install the packages first
 BiocManager::install(c("clusterProfiler"))
-ainstall.packages("tidyverse")
+install.packages("tidyverse")
 
 install.packages("devtools")
 devtools::install_github('kevinblighe/EnhancedVolcano')
 ```
 
-```{r, eval=FALSE}
+```{r}
 library(EnhancedVolcano)
-
 library(clusterProfiler)
 library(tidyverse)
 library(ggplot2)
+library(dplyr)
+library(DESeq2)
 ```
 
 
 
-```{r, eval=FALSE}
+```{r}
 ### load the data with read delim, because it is tab seperated
 annotatedRawCounts <- read_delim("Counts_raw.tsv")
 
 head(annotatedRawCounts)
-### Use column ID as rownames, rownames can be used for indexing
+
 annotatedRawCounts <- annotatedRawCounts  %>% 
   column_to_rownames(var = "ID")
 
@@ -316,29 +317,28 @@ annotatedRawCounts <- annotatedRawCounts  %>%
 rawCounts <- annotatedRawCounts[,3:14]
 annotations <- annotatedRawCounts[,1:2]
 
-#Read in the results from yesterday
 DESeq2ResultsDF <- read_delim("DESeq2Result_treatment.tsv")
 ```
 
-## Gene annotation
+# Gene annotation (databases)
 
 a)  If you look closely at the 21 OrgDB packes, there are 2 different packages for E. coli. Which one should we use? 
-
-**Answer:** Since we are working with E. coli K12 MG1655 it would make sense to use the genome wide annotation package for E.coli K12  (org.EcK12.eg.db)
 
 ```{r, echo=FALSE, out.width="85%", fig.cap='Website of the used database for E.coli K12.'}
 knitr::include_graphics("database.png")
 ```
 
-```{r, eval=FALSE}
+```{r}
 BiocManager::install("org.EcK12.eg.db")
 
 library(org.EcK12.eg.db)
 ```
 
+**Answer:** Since we are working with E. coli K12 MG1655 it would make sense to use the genome wide annotation package for E.coli K12  (org.EcK12.eg.db)
+
+
 c)  List the different available keytypes/identifiers.
 
-**Answer:** The different keytypes and identifiers are:
 ```{r}
 #gene names/identifiers
 genes <- annotations$gene
@@ -348,19 +348,12 @@ head(genes,10)
 keytypes(org.EcK12.eg.db)
 ```
 
+**Answer:** The different keytypes and identifiers are shown above.
+
+d)  Which of the keytypes/identifiers include the gene names given in the annotation?
 
 ```{r}
-#View first couple of keys for type GENENAME
-keys <-  keys(org.EcK12.eg.db, keytype = "GENENAME")
-head(keys,10)
-
-#make sure our IDs are contained in the keys
-#prints the number of genes that are found within the keys
-sum(genes %in% keys)
-
-##################################
-#Try out other keytypes until you find one that contains "almost" all genes
-keys <- keys(org.EcK12.eg.db, keytype = "GENENAME")
+keys <- keys(org.EcK12.eg.db, keytype = "SYMBOL")
 head(keys)
 
 #make sure our IDs are contained in the keys
@@ -368,6 +361,156 @@ head(keys)
 sum(genes %in% keys)
 ```
 
+**Answer:** After iterating through all different keytypes, SYMBOL was found to contain the genes.
+
+
+# Running functional analysis
+## Overrepresentation analysis
+
+a)  How many significantly up- and downregulated genes are left, after applying the LFC cutoff?
+
+```{r}
+# filter our results by padj and log2FoldChange
+res_up <- dplyr::filter(DESeq2ResultsDF, padj < 0.05 & log2FoldChange > 1)
+res_down <- dplyr::filter(DESeq2ResultsDF, padj < 0.05 & log2FoldChange < -1)
+
+# extract gene IDs for upregulated genes
+genes_up_id <- res_up$ID
+genes_up <- annotations[genes_up_id,"gene"]
+
+# extract gene names for downregulated genes
+genes_down_id <- res_down$ID
+genes_down <- annotations[genes_down_id,"gene"]
+
+# append both lists to get all deregulated genes
+genes_de <- c(genes_up,genes_down)
+
+length(genes_up)
+length(genes_down)
+length(genes_de)
+```
+
+**Answer:** With the *length* command we can show the number of genes up- or downregulated. 
+In total, 660 genes were up- and 582 genes were downregulated. In sum, 1242 genes are deregulated.
+
+b)  How many significantly over-represented biological processes (GO terms) are there, per subset of genes (all differentially expressed genes, up-regulated genes only, down-regulated genes only.)
+
+```{r}
+EC <- "org.EcK12.eg.db"
+EC_KEY <- "SYMBOL"
+
+orBP <- enrichGO(genes_de, 
+                 EC, 
+                 ont="BP",
+                 keyType = EC_KEY,
+                 pvalueCutoff=0.05) 
+
+
+orUpBP <- enrichGO(genes_up, 
+                 EC, 
+                 ont="BP", 
+                 keyType = EC_KEY, 
+                 pvalueCutoff=0.05) 
+
+
+orDownBP <- enrichGO(genes_down, 
+                 EC, 
+                 ont="BP",
+                 keyType = EC_KEY,
+                 pvalueCutoff=0.05)
+
+#To show the number of statistically significant GO terms
+n_BP_all <- nrow(orBP)
+n_BP_up <- nrow(orUpBP)
+n_BP_down <- nrow(orDownBP)
+
+print(n_BP_all)
+print(n_BP_up)
+print(n_BP_down)
+
+```
+
+**Answer:** There are in summary 100 GO terms deregulated, 59 up and 93 down. For a quick look into the first few results, take a look at the tables below.
+
+```{r, echo=FALSE}
+orBP_df <- as.data.frame(orBP)[1:5, c("Description", "p.adjust", "Count")]
+orUpBP_df <- as.data.frame(orUpBP)[1:5, c("Description", "p.adjust", "Count")]
+orDownBP_df <- as.data.frame(orDownBP)[1:5, c("Description", "p.adjust", "Count")]
+
+knitr::kable(orBP_df,
+caption = "Overrepresented BP terms - All DE genes",
+format = "latex")
+
+knitr::kable(orUpBP_df,
+caption = "Overrepresented BP terms - Upregulated genes",
+format = "latex")
+
+knitr::kable(orDownBP_df,
+caption = "Overrepresented BP terms - Downregulated genes",
+format = "latex")
+
+```
+
+# Vizualization
+## Vulcano Plot
+
+a)  Which is the most down-regulated gene and which is the most up-regulated gene, in terms of LFC?
+
+```{r}
+# Set a boolean column for significance
+DESeq2ResultsDF$significant <- ifelse(!is.na(DESeq2ResultsDF$padj) & DESeq2ResultsDF$padj < .05 , T, F)
+
+## Add gene annotations
+DESeq2ResultsDF$gene <- annotations[DESeq2ResultsDF$ID,"gene"]
+
+EnhancedVolcano(DESeq2ResultsDF,
+                lab =  DESeq2ResultsDF$gene,
+                x = 'log2FoldChange',
+                y = 'padj',
+                pCutoff = 0.05)# + xlim(0,2.5) + ylim(0,10) you can further restrict the plot by setting limits on x an y axis
+
+
+#show the entry with the highest log2FoldChange
+DESeq2ResultsDF[DESeq2ResultsDF$log2FoldChange == max(DESeq2ResultsDF$log2FoldChange),]
+
+#show the entry with the lowest log2FoldChange
+DESeq2ResultsDF[DESeq2ResultsDF$log2FoldChange == min(DESeq2ResultsDF$log2FoldChange),]
+
+ggsave('figs/volcano_plot.png', width = 12, height = 8)
+```
+
+**Answer:** The most upregulated gene is *ytiD* with a L2FC of 8.82. The most downregulated gene is *btsT* with a L2FC of -7.78.
+
+b)  How many times are those genes higher or lower expressed in treated compared to untreated WT strain? (Calculate the fold change from the LFC)
+
+```{r}
+DESeq2ResultsDF <- read_delim("DESeq2Result_treatment.tsv")
+res_df <- as.data.frame(DESeq2ResultsDF)
+
+most_up_idx <- which.max(res_df$log2FoldChange)
+most_up <- res_df[most_up_idx, ]
+
+most_down_idx <- which.min(res_df$log2FoldChange)
+most_down <- res_df[most_down_idx, ]
+
+gene_name_up <- annotations[most_up$ID, "gene"]
+gene_name_down <- annotations[most_down$ID, "gene"]
+
+
+most_up$foldChange <- 2^most_up$log2FoldChange
+most_down$foldChange <-  2^most_down$log2FoldChange
+
+most_up$gene <- gene_name_up
+most_down$gene <- gene_name_down
+
+print(c(most_up$log2foldChange, most_up$foldChange ,most_up$gene ))
+print(c(most_down$log2foldChange, most_down$foldChange, most_down$gene))
+
+```
+
+**Answer:** For a comprehensive comparison, we can do this manually by thinking of how the LFC is defined. Since it's a logarithmic function with base 2, we can calculate the FoldChange: FC = 2^LFC and compare the results manually. For faster and automated calculation, one may use the code above, which takes the data from the DESeq dataset for treated and untreated WT and calculates the FC.
+Gene *ytiD* is 451.1 times higher transcribed than in untreated WT.
+Gene *btsT* is 
 
 \newpage
 

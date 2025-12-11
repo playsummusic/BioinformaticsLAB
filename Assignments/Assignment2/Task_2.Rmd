@@ -355,8 +355,8 @@ The strong environmental effect and weak genotype effect suggest that:
 3. **Ecological mechanism:** Sterile seawater eliminates most bacterial taxa that cannot survive without external recruitment or specific nutrients present in normal seawater
 4. **Evolutionary implications:** Under chronic stress, genotype effects might emerge, but acutely, the environment overrides genetic differences
 
-
-# Part Two: Protein Folding prediction
+\newpage
+# Part 2: Protein Folding prediction
 The FAP results from the BLAST search origin from the automated BLAST search code from Task_1, which will not be displayed here again.
 The sequences from the original publication were retrieved from TUGraz TeachCenter/Course/LabouratoryCourseBioinformatics/Fatty_acid_photodecarboxylase.
 In the following section, we will extract one sequence from each FASTA-file and predict a protein structure using AlphaFold. Further, we want to analyze it graphically using PyMol.
@@ -405,7 +405,7 @@ write(sequence, file = "02sequence_input.fasta")
 We now have the two sequences that we can use for structure prediction. Let's predict them now using ColabFold
 
 
-# Part 2: Protein structure prediction
+# Protein structure prediction
 ## Installing ColabFold
 For the sake of easy use and not needing to go to the internet every time, we try to implement ColabFold using R:
 

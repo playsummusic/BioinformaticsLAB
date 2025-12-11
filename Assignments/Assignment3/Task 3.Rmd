@@ -289,7 +289,7 @@ tgt + none: The tgt gene is deleted so No functional tgt should be transcribed. 
 
 tgt + Nickel: The tgt knock out stais the same but now Nickel is added. This should not have a significant affect on the already very low to near zero counts.
 
-
+\newpage
 # Part 2: Functional Analysis and Vizualisation
 ## Setup
 
@@ -432,14 +432,16 @@ print(n_BP_down)
 
 
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, results='asis'}
 orBP_df <- as.data.frame(orBP)[1:5, c("Description", "p.adjust", "Count")]
 orUpBP_df <- as.data.frame(orUpBP)[1:5, c("Description", "p.adjust", "Count")]
 orDownBP_df <- as.data.frame(orDownBP)[1:5, c("Description", "p.adjust", "Count")]
 
 knitr::kable(orBP_df,
 caption = "Overrepresented BP terms - All DE genes",
-format = "latex")
+format = "latex",
+booktabs = TRUE) |>
+  kableExtra::kable_styling(latex_options = "HOLD_position")
 
 knitr::kable(orUpBP_df,
              caption = "Overrepresented BP terms - Upregulated genes",
@@ -455,12 +457,13 @@ knitr::kable(orUpBP_df,
 
 ```
 
+\newpage
 # Vizualization
 ## Vulcano Plot
 
 a)  Which is the most down-regulated gene and which is the most up-regulated gene, in terms of LFC?
 
-```{r, fig.cap="Vulcano plot", fig.height=8, out.width="80%", fig.align="center"}
+```{r, fig.cap="Vulcano plot", fig.height=7, out.width="75%", fig.align="center"}
 # Set a boolean column for significance
 DESeq2ResultsDF$significant <- ifelse(!is.na(DESeq2ResultsDF$padj) & DESeq2ResultsDF$padj < .05 , T, F)
 
@@ -482,6 +485,8 @@ DESeq2ResultsDF[DESeq2ResultsDF$log2FoldChange == min(DESeq2ResultsDF$log2FoldCh
 
 ggsave('figs/volcano_plot.png', width = 12, height = 8)
 ```
+
+
 
 **Answer:** The most upregulated gene is *ytiD* with a L2FC of 8.82. The most downregulated gene is *btsT* with a L2FC of -7.78.
 
@@ -582,7 +587,7 @@ dotplot(orDownBP, title="All significantly downregulated genes", orderBy = "Coun
 
 a)  How many clusters can you identify when showing 10, 20, and 30 categories?
 
-```{r, fig.cap="Enrichment plot with visual clustering for easier analyis", fig.align='center', fig.height=4}
+```{r, fig.cap="Enrichment plot with visual clustering for easier analyis. Used categories: 30", fig.align='center', fig.height=4}
 #Setting group=TRUE also does a visual clustering with labels
 enrichedBP <- enrichplot::pairwise_termsim(orDownBP)
 emapplot(enrichedBP, showCategory = 30, node_label="group", layout=igraph::layout_with_kk)

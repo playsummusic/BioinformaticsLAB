@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.28 (TeX Live 2025) (preloaded format=pdflatex 2025.12.10)  11 DEC 2025 18:56
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (TeX Live 2025) (preloaded format=pdflatex 2025.12.10)  11 DEC 2025 19:11
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -620,35 +620,34 @@ File: TGTcounts.png Graphic file (type png)
 <use TGTcounts.png>
 Package pdftex.def Info: TGTcounts.png  used on input line 596.
 (pdftex.def)             Requested size: 399.29463pt x 299.46939pt.
-[10 <./TGTcounts.png>]
+[10 <./TGTcounts.png>] [11]
 
 LaTeX Font Warning: Font shape `T1/lmtt/bx/it' in size <10.95> not available
-(Font)              Font shape `T1/lmtt/b/sl' tried instead on input line 659.
+(Font)              Font shape `T1/lmtt/b/sl' tried instead on input line 661.
 
-[11]
-<database.png, id=145, 1044.15094pt x 517.935pt>
+<database.png, id=143, 1044.15094pt x 517.935pt>
 File: database.png Graphic file (type png)
 <use database.png>
-Package pdftex.def Info: database.png  used on input line 687.
+Package pdftex.def Info: database.png  used on input line 689.
 (pdftex.def)             Requested size: 399.29463pt x 198.06601pt.
-[12 <./database.png>] [13] [14] [15]
-<Task-3_files/figure-latex/unnamed-chunk-23-1.pdf, id=174, 505.89pt x 578.16pt>
+[12] [13 <./database.png>] [14] [15] [16]
+<Task-3_files/figure-latex/unnamed-chunk-23-1.pdf, id=177, 505.89pt x 505.89pt>
 File: Task-3_files/figure-latex/unnamed-chunk-23-1.pdf Graphic file (type pdf)
 <use Task-3_files/figure-latex/unnamed-chunk-23-1.pdf>
 Package pdftex.def Info: Task-3_files/figure-latex/unnamed-chunk-23-1.pdf  used on input line 987.
-(pdftex.def)             Requested size: 375.80544pt x 429.49905pt.
-
+(pdftex.def)             Requested size: 352.31625pt x 352.32199pt.
+[17 <./Task-3_files/figure-latex/unnamed-chunk-23-1.pdf>]
 Overfull \hbox (1.64113pt too wide) in paragraph at lines 1006--1006
 []\T1/lmtt/m/n/10.95 ##      <dbl>          <dbl> <dbl> <dbl>    <dbl>    <dbl> <chr> <lgl>       <chr>[] 
  []
 
-[16 <./Task-3_files/figure-latex/unnamed-chunk-23-1.pdf>]
+
 Overfull \hbox (1.64113pt too wide) in paragraph at lines 1020--1020
 []\T1/lmtt/m/n/10.95 ##      <dbl>          <dbl> <dbl> <dbl>    <dbl>    <dbl> <chr> <lgl>       <chr>[] 
  []
 
-[17]
-<Task-3_files/figure-latex/unnamed-chunk-26-1.pdf, id=198, 505.89pt x 252.945pt>
+[18]
+<Task-3_files/figure-latex/unnamed-chunk-26-1.pdf, id=202, 505.89pt x 252.945pt>
 File: Task-3_files/figure-latex/unnamed-chunk-26-1.pdf Graphic file (type pdf)
 <use Task-3_files/figure-latex/unnamed-chunk-26-1.pdf>
 Package pdftex.def Info: Task-3_files/figure-latex/unnamed-chunk-26-1.pdf  used on input line 1131.
@@ -658,7 +657,7 @@ Overfull \hbox (36.13373pt too wide) in paragraph at lines 1131--1132
  [][] 
  []
 
-<Task-3_files/figure-latex/unnamed-chunk-27-1.pdf, id=199, 505.89pt x 252.945pt>
+<Task-3_files/figure-latex/unnamed-chunk-27-1.pdf, id=203, 505.89pt x 252.945pt>
 File: Task-3_files/figure-latex/unnamed-chunk-27-1.pdf Graphic file (type pdf)
 <use Task-3_files/figure-latex/unnamed-chunk-27-1.pdf>
 Package pdftex.def Info: Task-3_files/figure-latex/unnamed-chunk-27-1.pdf  used on input line 1139.
@@ -668,8 +667,8 @@ Overfull \hbox (36.13373pt too wide) in paragraph at lines 1139--1140
  [][] 
  []
 
-[18]
-<Task-3_files/figure-latex/unnamed-chunk-28-1.pdf, id=206, 505.89pt x 252.945pt>
+[19]
+<Task-3_files/figure-latex/unnamed-chunk-28-1.pdf, id=211, 505.89pt x 252.945pt>
 File: Task-3_files/figure-latex/unnamed-chunk-28-1.pdf Graphic file (type pdf)
 <use Task-3_files/figure-latex/unnamed-chunk-28-1.pdf>
 Package pdftex.def Info: Task-3_files/figure-latex/unnamed-chunk-28-1.pdf  used on input line 1147.
@@ -679,8 +678,8 @@ Overfull \hbox (36.13373pt too wide) in paragraph at lines 1147--1148
  [][] 
  []
 
-[19 <./Task-3_files/figure-latex/unnamed-chunk-26-1.pdf> <./Task-3_files/figure-latex/unnamed-chunk-27-1.pdf>]
-<Task-3_files/figure-latex/unnamed-chunk-29-1.pdf, id=226, 505.89pt x 252.945pt>
+[20 <./Task-3_files/figure-latex/unnamed-chunk-26-1.pdf> <./Task-3_files/figure-latex/unnamed-chunk-27-1.pdf>]
+<Task-3_files/figure-latex/unnamed-chunk-29-1.pdf, id=230, 505.89pt x 252.945pt>
 File: Task-3_files/figure-latex/unnamed-chunk-29-1.pdf Graphic file (type pdf)
 <use Task-3_files/figure-latex/unnamed-chunk-29-1.pdf>
 Package pdftex.def Info: Task-3_files/figure-latex/unnamed-chunk-29-1.pdf  used on input line 1191.
@@ -690,8 +689,8 @@ Overfull \hbox (36.13373pt too wide) in paragraph at lines 1191--1192
  [][] 
  []
 
-[20 <./Task-3_files/figure-latex/unnamed-chunk-28-1.pdf>]
-<Task-3_files/figure-latex/unnamed-chunk-30-1.pdf, id=241, 505.89pt x 252.945pt>
+[21 <./Task-3_files/figure-latex/unnamed-chunk-28-1.pdf>]
+<Task-3_files/figure-latex/unnamed-chunk-30-1.pdf, id=245, 505.89pt x 252.945pt>
 File: Task-3_files/figure-latex/unnamed-chunk-30-1.pdf Graphic file (type pdf)
 <use Task-3_files/figure-latex/unnamed-chunk-30-1.pdf>
 Package pdftex.def Info: Task-3_files/figure-latex/unnamed-chunk-30-1.pdf  used on input line 1213.
@@ -701,8 +700,8 @@ Overfull \hbox (36.13373pt too wide) in paragraph at lines 1213--1214
  [][] 
  []
 
-[21 <./Task-3_files/figure-latex/unnamed-chunk-29-1.pdf>]
-<Task-3_files/figure-latex/unnamed-chunk-31-1.pdf, id=254, 505.89pt x 289.08pt>
+[22 <./Task-3_files/figure-latex/unnamed-chunk-29-1.pdf>]
+<Task-3_files/figure-latex/unnamed-chunk-31-1.pdf, id=258, 505.89pt x 289.08pt>
 File: Task-3_files/figure-latex/unnamed-chunk-31-1.pdf Graphic file (type pdf)
 <use Task-3_files/figure-latex/unnamed-chunk-31-1.pdf>
 Package pdftex.def Info: Task-3_files/figure-latex/unnamed-chunk-31-1.pdf  used on input line 1246.
@@ -712,7 +711,7 @@ Overfull \hbox (36.13373pt too wide) in paragraph at lines 1246--1247
  [][] 
  []
 
-[22 <./Task-3_files/figure-latex/unnamed-chunk-30-1.pdf>] [23 <./Task-3_files/figure-latex/unnamed-chunk-31-1.pdf>] [24] [25] [26] (./Task-3.aux)
+[23 <./Task-3_files/figure-latex/unnamed-chunk-30-1.pdf>] [24 <./Task-3_files/figure-latex/unnamed-chunk-31-1.pdf>] [25] [26] [27] (./Task-3.aux)
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2025-11-14>
@@ -722,18 +721,18 @@ LaTeX Warning: There were multiply-defined labels.
 
  ) 
 Here is how much of TeX's memory you used:
- 13723 strings out of 469519
- 216366 string characters out of 5467703
- 639561 words of memory out of 5000000
+ 13724 strings out of 469519
+ 216373 string characters out of 5467703
+ 639582 words of memory out of 5000000
  41998 multiletter control sequences out of 15000+600000
  672314 words of font info for 78 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 89i,9n,93p,629b,638s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 89i,9n,93p,629b,544s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <c:/Users/veith/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmbx10.pfb><c:/Users/veith/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmbx12.pfb><c:/Users/veith/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr10.pfb><c:/Users/veith/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr12.pfb><c:/Users/veith/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr17.pfb><c:/Users/veith/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmri10.pfb><c:/Users/veith/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmtk10.pfb><c:/Users/veith/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmtko10.pfb><c:/Users/veith/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmtt10.pfb><c:/Users/veith/AppData/Roaming/TinyTeX/texmf-dist/fonts/type1/public/lm/lmtti10.pfb>
-Output written on Task-3.pdf (26 pages, 1003775 bytes).
+Output written on Task-3.pdf (27 pages, 1002899 bytes).
 PDF statistics:
- 494 PDF objects out of 1000 (max. 8388607)
- 409 compressed objects within 5 object streams
- 132 named destinations out of 1000 (max. 500000)
+ 499 PDF objects out of 1000 (max. 8388607)
+ 413 compressed objects within 5 object streams
+ 133 named destinations out of 1000 (max. 500000)
  266 words of extra memory for PDF output out of 10000 (max. 10000000)
 
